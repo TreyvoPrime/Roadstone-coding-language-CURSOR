@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Roadstone Web Runner</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #e5e7eb;
+      background: #0f172a;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top left, #1f2937, #020617);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+    .shell {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      width: min(1100px, 100vw - 32px);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .title {
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.2);
+      color: #a5f3fc;
+      border: 1px solid rgba(45, 212, 191, 0.4);
+    }
+    .main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+      gap: 12px;
+      min-height: 420px;
+    }
+    .panel {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(30, 64, 175, 0.4));
+      border-bottom: 1px solid rgba(30, 64, 175, 0.5);
+      font-size: 12px;
+    }
+    .panel-header span {
+      opacity: 0.85;
+    }
+    .panel-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    textarea {
+      flex: 1;
+      width: 100%;
+      border: none;
+      resize: none;
+      outline: none;
+      padding: 10px 12px;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      color: #e5e7eb;
+      background: transparent;
+      line-height: 1.4;
+      tab-size: 4;
+      white-space: pre;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      padding: 8px 12px 10px;
+      border-top: 1px solid rgba(30, 64, 175, 0.4);
+      background: radial-gradient(circle at bottom left, rgba(30, 64, 175, 0.35), transparent);
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(to right, #4f46e5, #06b6d4);
+      color: white;
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+    }
+    button.secondary {
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      box-shadow: none;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+      box-shadow: none;
+    }
+    .status {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #16a34a;
+      box-shadow: 0 0 10px rgba(22, 163, 74, 0.7);
+    }
+    .status-dot.busy {
+      background: #facc15;
+      box-shadow: 0 0 10px rgba(250, 204, 21, 0.7);
+    }
+    .status-dot.error {
+      background: #ef4444;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+    }
+    .status-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .output-text {
+      flex: 1;
+      padding: 8px 10px;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      background: #020617;
+      color: #e5e7eb;
+      white-space: pre-wrap;
+      overflow: auto;
+    }
+    .output-text .label {
+      opacity: 0.7;
+    }
+    .output-text .error {
+      color: #fecaca;
+    }
+    .footer {
+      font-size: 11px;
+      opacity: 0.7;
+      text-align: right;
+    }
+    @media (max-width: 800px) {
+      .main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="header">
+      <div>
+        <div class="title">Roadstone Web Runner</div>
+        <div style="font-size:12px; opacity:0.8;">Edit Roadstone code and run it through your Java interpreter. Keywords colored below textarea.</div>
+      </div>
+      <div class="badge">local · syntax hl</div>
+    </div>
+
+    <div class="main">
+      <div class="panel">
+        <div class="panel-header">
+          <span>Editor · <code style="opacity:0.8;">main.rd</code></span>
+          <span class="status-line">
+            <span id="status-dot" class="status-dot"></span>
+            <span id="status-text" class="status">Idle</span>
+          </span>
+        </div>
+        <div class="panel-body">
+          <textarea id="code" spellcheck="false" placeholder="Type Roadstone code here (keywords auto-colored below)..."></textarea>
+          <div class="highlight-panel">
+            <pre id="highlight-preview" class="highlight-preview"></pre>
+          </div>
+          <div class="controls">
+            <button id="runBtn">
+              ▶ Run Roadstone
+            </button>
+            <button id="loadExampleBtn" class="secondary">
+              Load example
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span>Output</span>
+        </div>
+        <div class="panel-body">
+          <div id="output" class="output-text">
+            <span class="label">Roadstone:</span> waiting for first run…
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Keywords: <span class="keyword">defi</span> <span class="keyword">if</span> <span class="keyword">end</span> <span class="keyword">print</span> | Strings: <span class="string">"hi"</span> | Numbers: <span class="number">42</span> | Comments: <span class="comment">-- test</span>
+    </div>
+  </div>
+
+  <script>
+    const runBtn = document.getElementById("runBtn");
+    const loadExampleBtn = document.getElementById("loadExampleBtn");
+    const codeEl = document.getElementById("code");
+    const highlightPreview = document.getElementById("highlight-preview");
+    const outputEl = document.getElementById("output");
+    const statusDot = document.getElementById("status-dot");
+    const statusText = document.getElementById("status-text");
+
+    const keywords = /\b(local|global|if|elseif|else|for|then|loop|end|while|defi|return|and|or|not|true|false|nil|CLASS|construct|self|extends|EXCEPT)\b/gi;
+    const strings = /"([^"\\]|\\.)*"/g;
+    const numbers = /\b\d+(?:\.\d*)?\b/g;
+    const comments = /--[^\r\n]*/g;
+
+    let timeoutId;
+    
+    function highlight() {
+      const text = codeEl.value;
+      let highlighted = text
+        .replace(comments, match => `<span class="comment">${escapeHtml(match)}</span>`)
+        .replace(strings, match => `<span class="string">${escapeHtml(match)}</span>`)
+        .replace(numbers, match => `<span class="number">${escapeHtml(match)}</span>`)
+        .replace(keywords, match => `<span class="keyword">${escapeHtml(match)}</span>`);
+      highlightPreview.textContent = text; // plain text for sizing
+      highlightPreview.innerHTML = highlighted;
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, '&amp;').replace(/</g, '<').replace(/>/g, '>');
+    }
+
+    codeEl.addEventListener('input', () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(highlight, 150);
+    });
+
+    codeEl.addEventListener('scroll', () => {
+      highlightPreview.scrollTop = codeEl.scrollTop;
+    });
+
+    const example = `global count = 0
+
+defi fib(n)
+  if n <= 1
+    return n
+  end
+  return fib(n-1) + fib(n-2)
+end
+
+for 10 then loop
+  print(fib(i))
+end`;
+
+    loadExampleBtn.addEventListener("click", () => {
+// Empty editor start - no preload
+    // highlight(); // called on input
+
+    });
+
+    async function runCode() {
+      const code = codeEl.value;
+      if (!code.trim()) return alert("Enter Roadstone code.");
+      runBtn.disabled = true;
+      statusDot.className = "status-dot busy";
+      statusText.textContent = "Running…";
+      outputEl.textContent = "Running...";
+
+      try {
+        const res = await fetch("/run", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({code})
+        });
+        const data = await res.json();
+        let out = "";
+        if (data.stage) out += `${data.stage.toUpperCase()}\n\n`;
+        if (data.stdout) out += `STDOUT:\n${data.stdout}\n\n`;
+        if (data.stderr) out += `STDERR:\n${data.stderr}\n\n`;
+        if (data.error) out += `ERROR:\n${data.error}`;
+        outputEl.textContent = out || "Done";
+        statusDot.className = data.error ? "status-dot error" : "status-dot";
+        statusText.textContent = data.error ? "Error" : "Done";
+      } catch (e) {
+        outputEl.textContent = `Network error: ${e}`;
+        statusDot.className = "status-dot error";
+        statusText.textContent = "Error";
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+
+    runBtn.addEventListener("click", runCode);
+
+    codeEl.value = example;
+    highlight();
+  </script>
+</body>
+</html>
+

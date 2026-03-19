@@ -19,19 +19,19 @@ import java.util.regex.Pattern;
  * - Comments use Lua-style `--`
  *
  * Supported so far:
- * - local declarations and assignments (globals if not already declared locally)
+ * - `local` and `global` declarations + assignment to existing bindings
  * - expressions: numbers, strings, booleans, nil, arithmetic, comparisons, and/or/not, concatenation `..`
  * - member access: a.b (primarily for self.x)
  * - if/elseif/else/end
+ * - EXCEPT["NewName", OldName] error remapping (runtime inside blocks, parse/lexer via scanning source)
  * - while ... loop ... end
  * - for <count_expr> then loop ... end  (defines local iteration var `i` from 1..count)
  * - functions: defi name(params) ... end
  * - return: return <expr> OR return <paramName> write-back to call-site argument if it was an identifier lvalue
  * - classes: CLASS Name(fields...) ... end with construct and methods via defi inside class
  *
- * Limitations:
- * - Lists/maps are not implemented yet in this v0
- * - Indexing (arr[i]) is not implemented yet
+ * Notes:
+ * - Lists/maps + indexing are implemented in this v0
  */
 public class RoadstoneMain {
 
@@ -133,6 +133,7 @@ public class RoadstoneMain {
         // Keywords (subset)
         EXCEPT,
         LOCAL,
+        GLOBAL,
         FOR, THEN, LOOP, END,
         IF, ELSEIF, ELSE,
         WHILE,
@@ -349,6 +350,7 @@ public class RoadstoneMain {
         private TokenType keywordType(String s) {
             return switch (s) {
                 case "local" -> TokenType.LOCAL;
+                case "global" -> TokenType.GLOBAL;
                 case "for" -> TokenType.FOR;
                 case "then" -> TokenType.THEN;
                 case "loop" -> TokenType.LOOP;
@@ -430,6 +432,12 @@ public class RoadstoneMain {
         final String name;
         final Expr init; // may be null
         LocalDecl(String name, Expr init) { this.name = name; this.init = init; }
+    }
+
+    static class GlobalDecl implements Stmt {
+        final String name;
+        final Expr init; // may be null
+        GlobalDecl(String name, Expr init) { this.name = name; this.init = init; }
     }
 
     static class Assign implements Stmt {
@@ -608,6 +616,7 @@ public class RoadstoneMain {
         private Stmt parseStatement() {
             Token t = peek();
             return switch (t.type) {
+                case GLOBAL -> parseGlobalDecl();
                 case EXCEPT -> parseExceptStmt();
                 case LOCAL -> parseLocalDecl();
                 case IF -> parseIf();
@@ -620,6 +629,17 @@ public class RoadstoneMain {
                 case SELF -> parseAssignmentOrExprStmt();
                 default -> throw parseError("Unexpected token at start of statement: " + t.type, t);
             };
+        }
+
+        private GlobalDecl parseGlobalDecl() {
+            consume(TokenType.GLOBAL, "Expected 'global'");
+            Token nameTok = consume(TokenType.IDENT, "Expected identifier after global");
+            String name = nameTok.lexeme;
+            Expr init = null;
+            if (match(TokenType.ASSIGN)) {
+                init = parseExpression();
+            }
+            return new GlobalDecl(name, init);
         }
 
         private ExceptStmt parseExceptStmt() {
@@ -1240,6 +1260,12 @@ public class RoadstoneMain {
                 return null;
             }
 
+            if (stmt instanceof GlobalDecl gd) {
+                Object v = gd.init == null ? null : evalExpr(env, gd.init, null);
+                globals.put(gd.name, v);
+                return null;
+            }
+
             if (stmt instanceof Assign a) {
                 Object v = evalExpr(env, a.value, null);
                 setLValue(env, a.target, v);
@@ -1527,9 +1553,12 @@ public class RoadstoneMain {
                     localRef.env.locals.put(lv.name, value);
                     return;
                 }
-                // Otherwise, assign global.
-                globals.put(lv.name, value);
-                return;
+                // Otherwise, update global only if it already exists.
+                if (globals.containsKey(lv.name)) {
+                    globals.put(lv.name, value);
+                    return;
+                }
+                throw new RoadstoneRuntimeError("NameError", "undefined variable '" + lv.name + "' (declare it with `local` or `global` first)");
             }
             if (target instanceof LMember lm) {
                 Object obj = evalExpr(env, lm.obj, null);

@@ -3,7 +3,7 @@ defi chicken(egg)
     return egg
 end
 
-egg = 3
+global egg = 3
 chicken(egg)
 print(egg)
 

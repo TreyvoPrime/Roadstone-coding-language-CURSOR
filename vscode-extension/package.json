@@ -1,0 +1,56 @@
+{
+  "name": "roadstone-language",
+  "displayName": "Roadstone",
+  "description": "Roadstone (.rd) language support and run command",
+  "version": "0.0.2",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Programming Languages"],
+  "activationEvents": [
+    "onLanguage:roadstone",
+    "onCommand:roadstone.runCurrentFile"
+  ],
+  "main": "extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "roadstone",
+        "aliases": ["Roadstone", "roadstone"],
+        "extensions": [".rd"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "roadstone",
+        "scopeName": "source.roadstone",
+        "path": "./syntaxes/roadstone.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "roadstone.runCurrentFile",
+        "title": "Roadstone: Run Current .rd file"
+      },
+      {
+        "command": "roadstone.openHelp",
+        "title": "Roadstone: Open Help (Docs)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "roadstone.runCurrentFile",
+        "key": "f6",
+        "when": "editorLangId == roadstone"
+      },
+      {
+        "command": "roadstone.openHelp",
+        "key": "ctrl+shift+h",
+        "when": "editorLangId == roadstone"
+      }
+    ]
+  }
+}
+

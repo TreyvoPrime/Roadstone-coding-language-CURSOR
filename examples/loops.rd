@@ -1,12 +1,8 @@
-local sum = 0
-for 5 then loop
-    sum = sum + i
-end
-print(sum)
+global dividin = 15
+global divide_total = 0 
 
-local n = 3
-while n > 0 loop
-    print(n)
-    n = n - 1
-end
-
+for 2000 then loop
+    divide_total = i / dividin
+    print(divide_total)
+    print("Hello, Treyvon")
+end 

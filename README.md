@@ -12,6 +12,18 @@ This repo currently contains a **minimal Roadstone interpreter prototype** writt
    - Compile: `javac RoadstoneMain.java`
    - Run: `java -cp . RoadstoneMain examples/hello.rd`
 
+## VS Code (optional)
+This repo also includes a tiny VS Code extension under `vscode-extension/` that adds:
+- `Roadstone: Run Current .rd file`
+
+To try it quickly:
+- Open `vscode-extension/` in a VS Code Extension Development Host (use `F5` from the Extensions panel)
+- Open any `*.rd` file from this repo in that host window
+- Run the command from Command Palette
+
+## Roadstone Docs
+For a full syntax + behavior sheet, see `ROADSTONE_DOCS.md`.
+
 ## Supported syntax in this v0
 
 - No semicolons
@@ -22,7 +34,8 @@ This repo currently contains a **minimal Roadstone interpreter prototype** writt
 - `while <cond> loop ... end`
 - Variables
   - `local x = ...` makes `x` local
-  - `x = ...` assigns to an existing local if present, otherwise to a global
+  - `global x = ...` makes `x` global
+  - `x = ...` updates an existing `local` or `global` (you must declare with `local` or `global` first)
 - Functions
   - `defi name(a, b) ... end`
   - `return` works

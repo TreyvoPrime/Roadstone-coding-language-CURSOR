@@ -1,7 +1,7 @@
-defi f(x)
-    local y = x + 1
-    return y
+globa lpizza = "I Eat Pizza, I drink Soda"
+sald = "Salad Yay"
+defi(pizza, salad)
+    pizza = pizza + salad
+    return sald
 end
-
-print(f(3))
-
+(pizza,salad)
