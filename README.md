@@ -1,6 +1,6 @@
-# Roadstone (v0) prototype
+# Roadstone 0.6
 
-This repo currently contains a **minimal Roadstone interpreter prototype** written in **Java** (so you can run it immediately with `javac`).
+This repo contains the Roadstone interpreter in Java, a rebuilt orange-black web IDE, and a VS Code extension for running and authoring `.rd` files.
 
 ## Run
 
@@ -24,7 +24,7 @@ To try it quickly:
 ## Roadstone Docs
 For a full syntax + behavior sheet, see `ROADSTONE_DOCS.md`.
 
-## Supported syntax in this v0
+## Supported syntax in 0.6
 
 - No semicolons
 - Block terminator: `end`
@@ -51,10 +51,11 @@ For a full syntax + behavior sheet, see `ROADSTONE_DOCS.md`.
   - List literal: `[expr1, expr2, ...]`
   - Map literal: `{ keyExpr: valueExpr, ... }`
   - Indexing: `obj[index]` (1-based for lists)
-- Error remapping
-  - Runtime errors: use `EXCEPT["NewErrorName", OldErrorName]` inside a block to rename matching runtime errors
-  - Lexer/Parser errors: since parsing happens before execution, Roadstone v0 remaps them by scanning the source text for `EXCEPT[...]`
-  - Example: `EXCEPT["SigmaError", ZeroDivisionError]` renames `ZeroDivisionError` to `SigmaError`
+- Error handling
+  - Legacy remap still works: `EXCEPT["NewErrorName", OldErrorName]`
+  - New 0.6 catch block: `EXCEPT["NewErrorName", OldErrorName] then ... exoutput ... end`
+  - Manual runtime errors: `raise(name, message)` or `error(name, message)`
+  - `exoutput` can use `exname`, `extarget`, and `exmessage` after a catch succeeds
 
 ## Examples
 

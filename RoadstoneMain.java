@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -132,6 +133,7 @@ public class RoadstoneMain {
 
         // Keywords (subset)
         EXCEPT,
+        EXOUTPUT,
         LOCAL,
         GLOBAL,
         FOR, THEN, LOOP, END,
@@ -372,6 +374,7 @@ public class RoadstoneMain {
                 case "self" -> TokenType.SELF;
                 case "extends" -> TokenType.EXTENDS;
                 case "EXCEPT" -> TokenType.EXCEPT;
+                case "exoutput" -> TokenType.EXOUTPUT;
                 default -> null;
             };
         }
@@ -524,6 +527,20 @@ public class RoadstoneMain {
         }
     }
 
+    static class ExceptBlockStmt implements Stmt {
+        final String replacementErrorName;
+        final String targetErrorName;
+        final Block tryBlock;
+        final Expr exoutputExpr; // may be null
+
+        ExceptBlockStmt(String replacementErrorName, String targetErrorName, Block tryBlock, Expr exoutputExpr) {
+            this.replacementErrorName = replacementErrorName;
+            this.targetErrorName = targetErrorName;
+            this.tryBlock = tryBlock;
+            this.exoutputExpr = exoutputExpr;
+        }
+    }
+
     static class ClassDef implements Stmt {
         final String name;
         final List<String> fields;
@@ -642,38 +659,43 @@ public class RoadstoneMain {
             return new GlobalDecl(name, init);
         }
 
-        private ExceptStmt parseExceptStmt() {
+        private Stmt parseExceptStmt() {
             consume(TokenType.EXCEPT, "Expected EXCEPT");
             consume(TokenType.LBRACKET, "Expected '[' after EXCEPT");
 
             // EXCEPT["SigmaError", ZeroDivisionError]
             Token first = advance(); // STRING or IDENT
-            String replacement;
-            if (first.type == TokenType.STRING) {
-                replacement = first.lexeme;
-            } else if (first.type == TokenType.IDENT) {
-                replacement = first.lexeme;
-            } else if (first.type == TokenType.SELF) {
-                replacement = "self";
-            } else {
-                throw parseError("Expected string or identifier error name in EXCEPT", first);
-            }
+            String replacement = parseExceptName(first, "Expected string or identifier error name in EXCEPT");
 
             consume(TokenType.COMMA, "Expected ',' in EXCEPT");
 
             Token second = advance(); // IDENT or STRING
-            String target;
-            if (second.type == TokenType.IDENT) {
-                target = second.lexeme;
-            } else if (second.type == TokenType.STRING) {
-                target = second.lexeme;
-            } else {
-                throw parseError("Expected identifier or string error name in EXCEPT", second);
-            }
+            String target = parseExceptName(second, "Expected identifier or string error name in EXCEPT");
 
             consume(TokenType.RBRACKET, "Expected ']' to close EXCEPT");
+            if (match(TokenType.THEN)) {
+                skipOptionalNewlines();
+                Block tryBlock = parseUntilBlockEnd(java.util.Set.of(TokenType.EXOUTPUT, TokenType.END));
+                Expr exoutputExpr = null;
+                if (match(TokenType.EXOUTPUT)) {
+                    exoutputExpr = parseExpression();
+                    skipOptionalNewlines();
+                }
+                consume(TokenType.END, "Expected 'end' to close EXCEPT block");
+                return new ExceptBlockStmt(replacement, target, tryBlock, exoutputExpr);
+            }
             skipOptionalNewlines();
             return new ExceptStmt(replacement, target);
+        }
+
+        private String parseExceptName(Token token, String errorMessage) {
+            if (token.type == TokenType.STRING || token.type == TokenType.IDENT) {
+                return token.lexeme;
+            }
+            if (token.type == TokenType.SELF) {
+                return "self";
+            }
+            throw parseError(errorMessage, token);
         }
 
         private Stmt parseAssignmentOrExprStmt() {
@@ -1184,6 +1206,20 @@ public class RoadstoneMain {
                     return "unknown";
                 }
             });
+
+            BuiltinFunction raiseBuiltin = new BuiltinFunction("raise") {
+                @Override
+                public Object call(Interpreter itp, List<Object> args) {
+                    if (args.isEmpty() || args.size() > 2) {
+                        throw new RoadstoneRuntimeError("ArgumentError", "raise(name, message?) expects 1 or 2 arguments");
+                    }
+                    String errorName = stringify(args.get(0));
+                    String message = args.size() == 2 ? stringify(args.get(1)) : errorName;
+                    throw new RoadstoneRuntimeError(errorName, message);
+                }
+            };
+            globals.put("raise", raiseBuiltin);
+            globals.put("error", raiseBuiltin);
         }
 
         void execute(Program program) {
@@ -1333,6 +1369,26 @@ public class RoadstoneMain {
 
             if (stmt instanceof ExprStmt es) {
                 evalExpr(env, es.expr, null);
+                return null;
+            }
+
+            if (stmt instanceof ExceptBlockStmt ebs) {
+                try {
+                    execBlock(env, ebs.tryBlock);
+                } catch (RoadstoneRuntimeError re) {
+                    if (!re.errorName.equals(ebs.targetErrorName)) {
+                        throw re;
+                    }
+                    if (ebs.exoutputExpr != null) {
+                        Env catchEnv = new Env(env);
+                        catchEnv.locals.put("exname", ebs.replacementErrorName);
+                        catchEnv.locals.put("extarget", re.errorName);
+                        catchEnv.locals.put("exmessage", re.getMessage());
+                        Object value = evalExpr(catchEnv, ebs.exoutputExpr, null);
+                        System.out.println(stringify(value));
+                    }
+                    return null;
+                }
                 return null;
             }
 
@@ -1646,11 +1702,15 @@ public class RoadstoneMain {
             final List<String> paramNames;
             final Block body;
             final Env closureEnv;
+            final Map<String, Integer> paramIndexes = new HashMap<>();
 
             RoadFunction(List<String> paramNames, Block body, Env closureEnv) {
                 this.paramNames = paramNames;
                 this.body = body;
                 this.closureEnv = closureEnv;
+                for (int i = 0; i < paramNames.size(); i++) {
+                    paramIndexes.put(paramNames.get(i), i);
+                }
             }
 
             Object call(Interpreter itp, Env callerEnv, List<Object> argVals, CallContext ctx) {
@@ -1664,28 +1724,34 @@ public class RoadstoneMain {
                     return null;
                 } catch (ReturnSignal rs) {
                     if (rs.identifier != null) {
-                        String id = rs.identifier;
-                        int paramIndex = paramNames.indexOf(id);
-                        if (paramIndex >= 0) {
-                            Object newVal = callEnv.locals.get(id);
-                            // Write-back happens only when the call-site argument was an identifier lvalue.
-                            if (ctx != null && paramIndex < ctx.argVarRefs.size()) {
-                                VarRef ref = ctx.argVarRefs.get(paramIndex);
-                                if (ref != null) {
-                                    if (ref.isGlobal) {
-                                        globals.put(ref.name, newVal);
-                                    } else {
-                                        ref.env.locals.put(ref.name, newVal);
-                                    }
-                                }
-                            }
-                            return newVal;
-                        }
-                        // Normal `return <identifier>`: behave like expression `return <identifierValue>`
-                        return getVar(callEnv, id);
+                        return resolveReturnedIdentifier(callEnv, rs.identifier, ctx, 0);
                     }
                     return rs.value;
                 }
+            }
+
+            Integer paramIndex(String name) {
+                return paramIndexes.get(name);
+            }
+
+            Object resolveReturnedIdentifier(Env callEnv, String identifier, CallContext ctx, int implicitParamOffset) {
+                Integer paramIndex = paramIndex(identifier);
+                if (paramIndex != null) {
+                    Object newVal = callEnv.locals.get(identifier);
+                    int explicitIndex = paramIndex - implicitParamOffset;
+                    if (explicitIndex >= 0 && ctx != null && explicitIndex < ctx.argVarRefs.size()) {
+                        VarRef ref = ctx.argVarRefs.get(explicitIndex);
+                        if (ref != null) {
+                            if (ref.isGlobal) {
+                                globals.put(ref.name, newVal);
+                            } else {
+                                ref.env.locals.put(ref.name, newVal);
+                            }
+                        }
+                    }
+                    return newVal;
+                }
+                return getVar(callEnv, identifier);
             }
         }
 
@@ -1721,27 +1787,7 @@ public class RoadstoneMain {
                     return null;
                 } catch (ReturnSignal rs) {
                     if (rs.identifier != null) {
-                        String id = rs.identifier;
-                        int paramIndex = fn.paramNames.indexOf(id);
-                        if (paramIndex >= 0) {
-                            Object newVal = callEnv.locals.get(id);
-                            // Skip write-back for the implicit `self` argument (paramIndex == 0).
-                            if (paramIndex >= 1 && ctx != null) {
-                                int explicitIndex = paramIndex - 1;
-                                if (explicitIndex >= 0 && explicitIndex < ctx.argVarRefs.size()) {
-                                    VarRef ref = ctx.argVarRefs.get(explicitIndex);
-                                    if (ref != null) {
-                                        if (ref.isGlobal) {
-                                            globals.put(ref.name, newVal);
-                                        } else {
-                                            ref.env.locals.put(ref.name, newVal);
-                                        }
-                                    }
-                                }
-                            }
-                            return newVal;
-                        }
-                        return getVar(callEnv, id);
+                        return fn.resolveReturnedIdentifier(callEnv, rs.identifier, ctx, 1);
                     }
                     return rs.value;
                 }
@@ -1821,7 +1867,7 @@ public class RoadstoneMain {
             }
 
             private List<String> getAllFields() {
-                List<String> out = new ArrayList<>();
+                LinkedHashSet<String> out = new LinkedHashSet<>();
                 if (baseName != null) {
                     Object baseVal = globals.get(baseName);
                     if (baseVal instanceof RoadClass baseCls) {
@@ -1829,12 +1875,7 @@ public class RoadstoneMain {
                     }
                 }
                 out.addAll(fields);
-                // Deduplicate while preserving order.
-                List<String> dedup = new ArrayList<>();
-                for (String f : out) {
-                    if (!dedup.contains(f)) dedup.add(f);
-                }
-                return dedup;
+                return new ArrayList<>(out);
             }
         }
 

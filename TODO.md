@@ -1,14 +1,17 @@
-# Syntax Highlighting for Roadstone Web Editor
+# Roadstone TODO
 
-## Steps:
+## Current Task: Fix User Class Error
 
-- [ ] 1. Read current index.html
-- [ ] 2. Implement CSS for .editor, .keyword, .string, .number, .comment
-- [ ] 3. Add JS highlightRoadstone(code) function with regex tokenizer
-- [ ] 4. Replace textarea with contenteditable div#editor
-- [ ] 5. Update JS: codeEl = document.getElementById('editor'), runCode uses editor.innerText
-- [ ] 6. Add events: editor.addEventListener('input', () => highlightRoadstone(editor)); cursor restore
-- [ ] 7. Update example load, status
-- [ ] 8. edit_file apply changes
-- [ ] 9. Test: browser reload, type keywords colored
-- [x] Complete: Syntax highlighting live!
+- [x] Identified syntax error: `while ... do` → `while ... loop`
+- [x] Identified missing `random()` builtin
+- [x] Provided fixed code with test
+
+## Improvements
+
+- Add `random(min, max)` builtin to RoadstoneMain.java
+- Weighted random helper function
+
+## Plan
+
+1. User test fixed code in web UI.
+2. If approved, edit RoadstoneMain.java for rand builtin.

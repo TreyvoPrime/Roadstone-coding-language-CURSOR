@@ -34,7 +34,7 @@
       "patterns": [
         {
           "name": "keyword.control.roadstone",
-          "match": "\\b(if|elseif|else|while|for|then|loop|end|return|and|or|not|EXCEPT)\\b"
+          "match": "\\b(if|elseif|else|while|for|then|loop|end|return|and|or|not|EXCEPT|exoutput)\\b"
         },
         {
           "name": "storage.modifier.roadstone",
@@ -58,7 +58,7 @@
       "patterns": [
         {
           "name": "support.type.roadstone",
-          "match": "\\b(type|len|keys)\\b"
+          "match": "\\b(type|len|keys|raise|error|print)\\b"
         }
       ]
     },

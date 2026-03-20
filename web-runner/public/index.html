@@ -3,319 +3,177 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Roadstone Web Runner</title>
+  <title>Roadstone 0.6 Studio</title>
   <style>
     :root {
       color-scheme: dark;
-      --bg: #020617;
-      --bg-soft: #0f172a;
-      --panel: rgba(15, 23, 42, 0.92);
-      --panel-strong: rgba(15, 23, 42, 0.98);
-      --border: rgba(148, 163, 184, 0.2);
-      --border-strong: rgba(96, 165, 250, 0.35);
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --accent-2: #818cf8;
-      --success: #22c55e;
-      --warning: #facc15;
-      --danger: #f87171;
+      --bg: #110b08;
+      --panel: rgba(27, 16, 11, 0.96);
+      --border: rgba(244, 127, 34, 0.2);
+      --text: #fff1e8;
+      --muted: #c6a28c;
+      --accent: #ff7a1a;
+      --accent-soft: #ffb15f;
+      --accent-hot: #ffd084;
+      --success: #7fe7aa;
+      --warning: #ffd166;
+      --danger: #ff7979;
       --line-number-width: 56px;
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --ui-font: "Segoe UI Variable", "Trebuchet MS", "Bahnschrift", sans-serif;
+      --mono-font: "Cascadia Code", "Consolas", monospace;
+      font-family: var(--ui-font);
     }
-
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 30%),
-        radial-gradient(circle at top right, rgba(129, 140, 248, 0.12), transparent 32%),
-        linear-gradient(180deg, #020617 0%, #08101f 100%);
+        radial-gradient(circle at top left, rgba(255, 122, 26, 0.28), transparent 28%),
+        linear-gradient(135deg, #090505 0%, #140a07 40%, #1a110b 100%);
     }
-
     .app {
-      width: min(1440px, 100%);
+      width: min(1580px, 100%);
       margin: 0 auto;
-      padding: 24px;
+      padding: 18px;
       display: grid;
       gap: 16px;
     }
-
-    .hero,
-    .panel {
+    .hero, .shell, .panel {
       background: var(--panel);
       border: 1px solid var(--border);
-      box-shadow: 0 24px 60px rgba(2, 6, 23, 0.45);
-      backdrop-filter: blur(16px);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(18px);
     }
-
     .hero {
-      border-radius: 24px;
-      padding: 22px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 18px;
+      border-radius: 28px;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.95fr);
+      gap: 20px;
     }
-
+    .eyebrow {
+      color: var(--accent-hot);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      font-size: 0.75rem;
+      margin-bottom: 10px;
+    }
     .hero h1 {
       margin: 0;
-      font-size: clamp(1.55rem, 2.1vw, 2.25rem);
-      line-height: 1.1;
+      font-size: clamp(2rem, 4vw, 3.7rem);
+      line-height: 0.95;
+      max-width: 10ch;
     }
-
-    .hero p {
-      margin: 10px 0 0;
+    .hero p, .muted, .panel-subtitle, .card p, .card span {
       color: var(--muted);
-      max-width: 720px;
+      line-height: 1.6;
     }
-
-    .hero-badges {
+    .chips, .stats, .toolbar-group, .panel-row, .footer-group, .status-line {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .badge {
-      display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(56, 189, 248, 0.28);
-      background: rgba(14, 165, 233, 0.12);
-      color: #bae6fd;
-      font-size: 0.82rem;
-      white-space: nowrap;
     }
-
-    .workspace {
+    .chip, .pill, .stat, .card {
+      border-radius: 20px;
+      border: 1px solid rgba(255, 159, 67, 0.16);
+      background: rgba(255, 122, 26, 0.08);
+      padding: 12px 14px;
+    }
+    .chip, .pill { padding: 8px 12px; border-radius: 999px; color: var(--accent-hot); font-size: 0.82rem; }
+    .stat strong, .card strong, .panel-title strong { display: block; margin-bottom: 6px; }
+    .shell {
+      border-radius: 30px;
+      padding: 16px;
       display: grid;
-      grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+      grid-template-columns: minmax(240px, 0.76fr) minmax(0, 1.6fr) minmax(320px, 0.95fr);
       gap: 16px;
-      align-items: stretch;
+      min-height: 760px;
     }
-
+    .sidebar, .workspace, .output-column { display: grid; gap: 16px; min-height: 0; }
     .panel {
-      border-radius: 24px;
+      border-radius: 22px;
       overflow: hidden;
-      min-height: 640px;
       display: flex;
       flex-direction: column;
+      min-height: 0;
+      background: linear-gradient(180deg, rgba(29, 17, 12, 0.98), rgba(12, 8, 6, 0.98));
     }
-
-    .panel-header {
-      padding: 14px 18px;
+    .panel-header, .panel-footer, .toolbar, .editor-meta {
+      padding: 14px 16px;
       border-bottom: 1px solid var(--border);
-      background: linear-gradient(90deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.86));
       display: flex;
       justify-content: space-between;
-      align-items: center;
       gap: 12px;
-    }
-
-    .panel-title {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .panel-title strong {
-      font-size: 0.98rem;
-    }
-
-    .panel-title span,
-    .panel-meta,
-    .hint,
-    .legend {
-      color: var(--muted);
-      font-size: 0.83rem;
-    }
-
-    .status-line {
-      display: inline-flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 8px;
-      font-size: 0.83rem;
-      color: var(--muted);
     }
-
+    .panel-footer { border-top: 1px solid var(--border); border-bottom: none; }
+    .toolbar { background: linear-gradient(90deg, rgba(47, 27, 17, 0.92), rgba(25, 16, 12, 0.94)); }
+    .editor-meta { background: rgba(17, 10, 8, 0.9); }
+    .panel-title { display: grid; gap: 4px; }
     .status-dot {
       width: 10px;
       height: 10px;
       border-radius: 999px;
       background: var(--success);
-      box-shadow: 0 0 14px rgba(34, 197, 94, 0.7);
-      flex: 0 0 auto;
+      box-shadow: 0 0 16px rgba(127, 231, 170, 0.6);
     }
-
-    .status-dot.busy {
-      background: var(--warning);
-      box-shadow: 0 0 14px rgba(250, 204, 21, 0.7);
-    }
-
-    .status-dot.error {
-      background: var(--danger);
-      box-shadow: 0 0 14px rgba(248, 113, 113, 0.7);
-    }
-
-    .editor-shell {
-      display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr) auto;
-      min-height: 0;
-      flex: 1;
-    }
-
-    .toolbar,
-    .footer-bar {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .footer-bar {
-      border-top: 1px solid var(--border);
-      border-bottom: none;
-    }
-
-    .toolbar-group,
-    .footer-group {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
+    .status-dot.busy { background: var(--warning); box-shadow: 0 0 16px rgba(255, 209, 102, 0.65); }
+    .status-dot.error { background: var(--danger); box-shadow: 0 0 16px rgba(255, 121, 121, 0.65); }
+    button, select { font: inherit; }
     button {
       border: 1px solid transparent;
       border-radius: 999px;
       padding: 10px 16px;
-      font-size: 0.92rem;
-      font-weight: 600;
       cursor: pointer;
-      color: white;
-      background: linear-gradient(135deg, var(--accent-2), var(--accent));
-      box-shadow: 0 14px 30px rgba(59, 130, 246, 0.25);
+      color: #170c08;
+      background: linear-gradient(135deg, var(--accent-hot), var(--accent));
+      box-shadow: 0 12px 28px rgba(255, 122, 26, 0.28);
+      font-weight: 700;
       transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
     }
-
-    button:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 18px 34px rgba(59, 130, 246, 0.33);
-    }
-
     button.secondary {
-      background: rgba(15, 23, 42, 0.65);
-      border-color: rgba(148, 163, 184, 0.25);
       color: var(--text);
+      background: rgba(56, 33, 21, 0.74);
+      border-color: rgba(255, 159, 67, 0.2);
       box-shadow: none;
     }
-
-    button:disabled {
-      cursor: default;
-      opacity: 0.58;
-      transform: none;
-      box-shadow: none;
-    }
-
+    button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 18px 34px rgba(255, 122, 26, 0.34); }
+    button:disabled { opacity: 0.55; cursor: default; transform: none; box-shadow: none; }
     select {
-      appearance: none;
       border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(255, 159, 67, 0.24);
+      background: rgba(37, 23, 16, 0.84);
       color: var(--text);
       padding: 10px 14px;
-      font: inherit;
     }
-
-    .editor-info {
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-      background: rgba(2, 6, 23, 0.28);
-    }
-
     .editor-frame {
       position: relative;
-      overflow: hidden;
+      flex: 1;
       min-height: 0;
-      font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(26, 14, 10, 0.98), rgba(12, 8, 6, 0.98));
+      font-family: var(--mono-font);
       font-size: 14px;
       line-height: 1.6;
       tab-size: 2;
-      background:
-        linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98)),
-        linear-gradient(90deg, rgba(30, 41, 59, 0.88), rgba(2, 6, 23, 0.92));
     }
-
-    .editor-scroll {
-      position: absolute;
-      inset: 0;
-      overflow: auto;
-      scrollbar-gutter: stable;
-    }
-
-    .editor-grid {
-      position: relative;
-      display: grid;
-      grid-template-columns: var(--line-number-width) minmax(0, 1fr);
-      min-height: 100%;
-    }
-
-    .line-numbers,
-    .code-layer,
-    .code-input {
-      padding-top: 18px;
-      padding-bottom: 24px;
-    }
-
+    .editor-scroll { position: absolute; inset: 0; overflow: auto; scrollbar-gutter: stable; }
+    .editor-grid { display: grid; grid-template-columns: var(--line-number-width) minmax(0, 1fr); min-height: 100%; }
+    .line-numbers, .code-layer, .code-input { margin: 0; padding-top: 18px; padding-bottom: 28px; white-space: pre; }
     .line-numbers {
-      margin: 0;
       padding-left: 14px;
       padding-right: 12px;
       text-align: right;
+      color: rgba(198, 162, 140, 0.62);
+      background: rgba(23, 14, 10, 0.94);
+      border-right: 1px solid rgba(255, 159, 67, 0.12);
       user-select: none;
-      color: rgba(148, 163, 184, 0.58);
-      border-right: 1px solid rgba(148, 163, 184, 0.12);
-      background: rgba(15, 23, 42, 0.58);
-      white-space: pre;
     }
-
-    .code-stack {
-      position: relative;
-      min-width: 0;
-    }
-
-    .code-layer,
-    .code-input {
-      margin: 0;
-      padding-left: 18px;
-      padding-right: 22px;
-      min-height: 100%;
-      white-space: pre;
-      overflow: hidden;
-    }
-
-    .code-layer {
-      color: #dbeafe;
-      pointer-events: none;
-      word-break: normal;
-    }
-
+    .code-stack { position: relative; min-width: 0; }
+    .code-layer { padding-left: 18px; padding-right: 20px; color: #ffe8d7; pointer-events: none; }
     .code-input {
       position: absolute;
       inset: 0;
@@ -325,146 +183,101 @@
       resize: none;
       background: transparent;
       color: transparent;
-      caret-color: #f8fafc;
+      caret-color: #fffaf7;
       -webkit-text-fill-color: transparent;
+      overflow: auto;
+      padding-top: 18px;
+      padding-right: 20px;
+      padding-bottom: 28px;
+      padding-left: calc(var(--line-number-width) + 18px);
       font: inherit;
       line-height: inherit;
       tab-size: inherit;
-      padding-top: 18px;
-      padding-right: 22px;
-      padding-bottom: 24px;
-      padding-left: calc(var(--line-number-width) + 18px);
-      overflow: auto;
     }
-
-    .code-input::selection {
-      background: rgba(96, 165, 250, 0.24);
-    }
-
-    .code-input::-webkit-scrollbar,
-    .editor-scroll::-webkit-scrollbar,
-    .output::-webkit-scrollbar {
-      width: 12px;
-      height: 12px;
-    }
-
-    .code-input::-webkit-scrollbar-thumb,
-    .editor-scroll::-webkit-scrollbar-thumb,
-    .output::-webkit-scrollbar-thumb {
-      background: rgba(71, 85, 105, 0.9);
+    .code-input::selection { background: rgba(255, 159, 67, 0.28); }
+    .code-input::-webkit-scrollbar, .editor-scroll::-webkit-scrollbar, .output::-webkit-scrollbar, .list-body::-webkit-scrollbar { width: 12px; height: 12px; }
+    .code-input::-webkit-scrollbar-thumb, .editor-scroll::-webkit-scrollbar-thumb, .output::-webkit-scrollbar-thumb, .list-body::-webkit-scrollbar-thumb {
+      background: rgba(111, 74, 50, 0.9);
       border-radius: 999px;
       border: 3px solid transparent;
       background-clip: padding-box;
     }
-
     .empty-state {
       position: absolute;
-      inset: 18px 22px auto calc(var(--line-number-width) + 18px);
-      color: rgba(148, 163, 184, 0.44);
+      inset: 18px 20px auto calc(var(--line-number-width) + 18px);
+      color: rgba(198, 162, 140, 0.36);
       pointer-events: none;
-      font-family: inherit;
-      line-height: 1.6;
       white-space: pre-wrap;
+      font-family: var(--mono-font);
+      line-height: 1.6;
     }
-
-    .token-keyword { color: #c084fc; }
-    .token-control { color: #f472b6; }
-    .token-boolean { color: #22d3ee; }
-    .token-string { color: #86efac; }
-    .token-number { color: #fbbf24; }
-    .token-comment { color: #64748b; font-style: italic; }
-    .token-function { color: #60a5fa; }
-    .token-operator { color: #f8fafc; }
-    .token-type { color: #fca5a5; }
-    .token-property { color: #7dd3fc; }
-
-    .side-panel {
-      display: grid;
-      grid-template-rows: auto minmax(0, 1fr) auto;
-      min-height: 0;
-      flex: 1;
-    }
-
     .output {
+      flex: 1;
+      min-height: 0;
       margin: 0;
       padding: 18px;
-      min-height: 0;
       overflow: auto;
-      background: rgba(2, 6, 23, 0.9);
-      color: #dbeafe;
-      font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: rgba(11, 8, 7, 0.96);
+      color: #ffe9dc;
+      font-family: var(--mono-font);
       font-size: 13px;
-      line-height: 1.58;
+      line-height: 1.6;
       white-space: pre-wrap;
       word-break: break-word;
     }
-
-    .legend {
+    .list-body { padding: 12px; overflow: auto; display: grid; gap: 10px; }
+    .item {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(55, 32, 22, 0.54);
+      border: 1px solid rgba(255, 159, 67, 0.14);
+    }
+    .item.warning { border-color: rgba(255, 209, 102, 0.24); }
+    .item.error { border-color: rgba(255, 121, 121, 0.24); }
+    .item-row {
       display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      padding: 14px 18px 18px;
-      border-top: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.76);
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      font-family: var(--mono-font);
+      font-size: 0.9rem;
     }
-
-    .legend strong {
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    .legend code {
-      padding: 2px 6px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      font-family: inherit;
-    }
-
+    .item-row span:last-child { color: var(--muted); font-family: var(--ui-font); font-size: 0.82rem; }
     .kbd {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
+      min-height: 22px;
+      padding: 0 7px;
       border-radius: 8px;
-      border: 1px solid rgba(148, 163, 184, 0.24);
-      background: rgba(15, 23, 42, 0.7);
-      padding: 2px 7px;
-      font-size: 0.76rem;
+      border: 1px solid rgba(255, 159, 67, 0.2);
+      background: rgba(44, 27, 18, 0.84);
       color: var(--text);
-      min-height: 24px;
+      font-size: 0.74rem;
     }
-
-    @media (max-width: 1120px) {
-      .workspace {
-        grid-template-columns: minmax(0, 1fr);
-      }
-
-      .panel {
-        min-height: 520px;
-      }
+    .token-keyword { color: #ffb15f; }
+    .token-control { color: #ffd084; }
+    .token-string { color: #8ef0c2; }
+    .token-number { color: #ffe27a; }
+    .token-comment { color: #8e6f5c; font-style: italic; }
+    .token-function { color: #ff8c61; }
+    .token-builtin { color: #ffa45c; }
+    .token-boolean { color: #91e2ff; }
+    .token-type { color: #ffc6a1; }
+    .token-property { color: #ffd9bb; }
+    .token-operator { color: #fff7f1; }
+    @media (max-width: 1320px) {
+      .shell { grid-template-columns: minmax(0, 1fr); }
+      .sidebar, .output-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
-
+    @media (max-width: 920px) {
+      .hero { grid-template-columns: minmax(0, 1fr); }
+      .sidebar, .output-column { grid-template-columns: minmax(0, 1fr); }
+    }
     @media (max-width: 720px) {
-      .app {
-        padding: 14px;
-      }
-
-      .hero,
-      .panel {
-        border-radius: 18px;
-      }
-
-      .hero {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .editor-scroll {
-        font-size: 13px;
-      }
-
-      :root {
-        --line-number-width: 48px;
-      }
+      :root { --line-number-width: 48px; }
+      .app { padding: 12px; }
+      .hero, .shell, .panel { border-radius: 22px; }
     }
   </style>
 </head>
@@ -472,57 +285,101 @@
   <main class="app">
     <section class="hero">
       <div>
-        <h1>Roadstone Web Runner</h1>
-        <p>
-          Rebuilt editor with live syntax coloring, line numbers, smoother typing, better keyboard handling,
-          and fast local runs through the Roadstone Java interpreter.
-        </p>
+        <div class="eyebrow">Roadstone 0.6</div>
+        <h1>Forge a better IDE.</h1>
+        <p>Orange-black Roadstone Studio keeps 0.5 keywords working, adds deeper 0.6 exception flow, and gives live editor diagnostics before you run.</p>
+        <div class="chips" style="margin-top:16px">
+          <span class="chip">orange-black redesign</span>
+          <span class="chip">0.5 compatible</span>
+          <span class="chip">EXCEPT + exoutput</span>
+          <span class="chip">raise() support</span>
+        </div>
       </div>
-      <div class="hero-badges">
-        <span class="badge">local interpreter</span>
-        <span class="badge">live syntax highlight</span>
-        <span class="badge">smooth textarea overlay editor</span>
+      <div style="display:grid;gap:12px;align-content:start">
+        <div class="stats">
+          <div class="stat"><strong id="heroKeywordCount">0</strong><span>keywords in buffer</span></div>
+          <div class="stat"><strong id="heroDiagnosticCount">0</strong><span>live diagnostics</span></div>
+          <div class="stat"><strong id="heroRunCount">0</strong><span>session runs</span></div>
+        </div>
+        <div class="card">
+          <strong>0.6 EXCEPT flow</strong>
+          <span><code>EXCEPT["FriendlyError", ZeroDivisionError] then ... exoutput ... end</code> catches a target error, remaps its name, prints your output, and lets the program continue.</span>
+        </div>
+        <div class="card">
+          <strong>Keyboard flow</strong>
+          <span><span class="kbd">Ctrl + Enter</span> runs, <span class="kbd">Tab</span> indents, and auto-indent follows Roadstone block shapes.</span>
+        </div>
       </div>
     </section>
 
-    <section class="workspace">
-      <article class="panel">
-        <div class="panel-header">
-          <div class="panel-title">
-            <strong>Editor</strong>
-            <span><code>main.rd</code> · Roadstone syntax-aware playground</span>
+    <section class="shell">
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <strong>Keyword Radar</strong>
+              <span class="panel-subtitle">0.5 and 0.6 surface area</span>
+            </div>
           </div>
-          <div class="status-line">
-            <span id="status-dot" class="status-dot"></span>
-            <span id="status-text">Idle</span>
+          <div id="keywordRadar" class="list-body"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <strong>Flight Notes</strong>
+              <span class="panel-subtitle">Patterns this editor expects</span>
+            </div>
           </div>
-        </div>
+          <div class="list-body">
+            <div class="item">
+              <strong>Legacy remap</strong>
+              <p><code>EXCEPT["SigmaError", ZeroDivisionError]</code> still works like older Roadstone builds.</p>
+            </div>
+            <div class="item">
+              <strong>0.6 catch block</strong>
+              <p><code>EXCEPT["FriendlyError", ZeroDivisionError] then</code><br /><code>  raise("ZeroDivisionError", "divider cannot be zero")</code><br /><code>exoutput "Caught " .. exmessage</code><br /><code>end</code></p>
+            </div>
+          </div>
+        </section>
+      </aside>
 
-        <div class="editor-shell">
+      <section class="workspace">
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <strong>Roadstone Studio</strong>
+              <span class="panel-subtitle"><code>main.rd</code> loaded into the 0.6 editor core</span>
+            </div>
+            <div class="status-line">
+              <span id="statusDot" class="status-dot"></span>
+              <span id="statusText" class="muted">Idle</span>
+            </div>
+          </div>
+
           <div class="toolbar">
             <div class="toolbar-group">
-              <button id="runBtn" type="button">▶ Run Roadstone</button>
+              <button id="runBtn" type="button">Run Roadstone</button>
               <button id="loadExampleBtn" class="secondary" type="button">Load example</button>
               <button id="clearBtn" class="secondary" type="button">Clear</button>
             </div>
             <div class="toolbar-group">
-              <label class="panel-meta" for="exampleSelect">Example</label>
+              <label class="muted" for="exampleSelect">Example</label>
               <select id="exampleSelect">
-                <option value="fibonacci">Recursive Fibonacci</option>
-                <option value="classDemo">Class + methods</option>
-                <option value="exceptions">EXCEPT remapping</option>
+                <option value="compatibility">0.5 compatibility</option>
+                <option value="exceptionFlow">0.6 exception flow</option>
+                <option value="classRunner">Class runner</option>
               </select>
             </div>
           </div>
 
-          <div class="editor-info">
-            <div class="footer-group">
-              <span id="cursorMeta" class="panel-meta">Ln 1, Col 1</span>
-              <span id="bufferMeta" class="panel-meta">1 line · 0 chars</span>
+          <div class="editor-meta">
+            <div class="panel-row">
+              <span id="cursorMeta" class="muted">Ln 1, Col 1</span>
+              <span id="bufferMeta" class="muted">1 line | 0 chars</span>
             </div>
-            <div class="footer-group hint">
-              <span class="kbd">Tab</span> insert indent
-              <span class="kbd">Ctrl/⌘ + Enter</span> run code
+            <div class="panel-row muted">
+              <span class="kbd">Tab</span> indent
+              <span class="kbd">Ctrl + Enter</span> run
             </div>
           </div>
 
@@ -530,60 +387,49 @@
             <div id="editorScroll" class="editor-scroll" aria-hidden="true">
               <div class="editor-grid">
                 <pre id="lineNumbers" class="line-numbers">1</pre>
-                <div class="code-stack">
-                  <pre id="highlightedCode" class="code-layer"></pre>
-                </div>
+                <div class="code-stack"><pre id="highlightedCode" class="code-layer"></pre></div>
               </div>
             </div>
-            <textarea
-              id="codeInput"
-              class="code-input"
-              spellcheck="false"
-              autocapitalize="off"
-              autocomplete="off"
-              autocorrect="off"
-              aria-label="Roadstone code editor"
-            ></textarea>
-            <div id="emptyState" class="empty-state">Type Roadstone code here…</div>
+            <textarea id="codeInput" class="code-input" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Roadstone code editor"></textarea>
+            <div id="emptyState" class="empty-state">Write Roadstone here. The radar on the left tracks 0.5 and 0.6 keywords while you type.</div>
           </div>
 
-          <div class="footer-bar">
-            <div class="footer-group legend">
-              <strong>Tokens</strong>
-              <code class="token-keyword">defi</code>
-              <code class="token-control">if / end</code>
-              <code class="token-string">"hello"</code>
-              <code class="token-number">42</code>
-              <code class="token-comment">-- note</code>
-              <code class="token-type">CLASS</code>
-            </div>
-          </div>
-        </div>
-      </article>
-
-      <aside class="panel">
-        <div class="panel-header">
-          <div class="panel-title">
-            <strong>Output</strong>
-            <span>Compile and runtime messages from the Java interpreter</span>
-          </div>
-        </div>
-        <div class="side-panel">
-          <pre id="output" class="output">Roadstone runner ready.
-Press “Run Roadstone” to compile and execute the current buffer.</pre>
-          <div class="footer-bar">
+          <div class="panel-footer">
             <div class="footer-group">
-              <button id="copyOutputBtn" class="secondary" type="button">Copy output</button>
-            </div>
-            <div class="footer-group panel-meta">
-              <span id="runMeta">No runs yet</span>
+              <span class="pill">Compatibility: <strong id="compatibilityMeta">watching legacy keywords</strong></span>
+              <span class="pill">Exceptions: <strong id="exceptionMeta">legacy + block catch</strong></span>
             </div>
           </div>
-        </div>
+        </section>
+      </section>
+
+      <aside class="output-column">
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <strong>Diagnostics</strong>
+              <span class="panel-subtitle">Immediate editor-side warnings</span>
+            </div>
+          </div>
+          <div id="diagnostics" class="list-body"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <strong>Run Output</strong>
+              <span class="panel-subtitle">Compiler and runtime messages from Java</span>
+            </div>
+          </div>
+          <pre id="output" class="output">Roadstone 0.6 Studio ready.
+Load an example or start typing, then run the buffer.</pre>
+          <div class="panel-footer">
+            <div class="footer-group"><button id="copyOutputBtn" class="secondary" type="button">Copy output</button></div>
+            <div class="footer-group muted"><span id="runMeta">Ready</span></div>
+          </div>
+        </section>
       </aside>
     </section>
   </main>
-
   <script>
     const runBtn = document.getElementById("runBtn");
     const loadExampleBtn = document.getElementById("loadExampleBtn");
@@ -595,168 +441,234 @@ Press “Run Roadstone” to compile and execute the current buffer.</pre>
     const lineNumbers = document.getElementById("lineNumbers");
     const editorScroll = document.getElementById("editorScroll");
     const output = document.getElementById("output");
-    const statusDot = document.getElementById("status-dot");
-    const statusText = document.getElementById("status-text");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
     const cursorMeta = document.getElementById("cursorMeta");
     const bufferMeta = document.getElementById("bufferMeta");
     const emptyState = document.getElementById("emptyState");
     const runMeta = document.getElementById("runMeta");
+    const keywordRadar = document.getElementById("keywordRadar");
+    const diagnostics = document.getElementById("diagnostics");
+    const heroKeywordCount = document.getElementById("heroKeywordCount");
+    const heroDiagnosticCount = document.getElementById("heroDiagnosticCount");
+    const heroRunCount = document.getElementById("heroRunCount");
+    const compatibilityMeta = document.getElementById("compatibilityMeta");
+    const exceptionMeta = document.getElementById("exceptionMeta");
 
-    const KEYWORD_SET = new Set(["local", "global", "defi", "return", "loop", "then", "while", "and", "or", "not", "construct", "extends", "self", "EXCEPT"]);
-    const CONTROL_SET = new Set(["if", "elseif", "else", "for", "end"]);
+    const KEYWORDS = [
+      { token: "local", label: "local scope" },
+      { token: "global", label: "global scope" },
+      { token: "defi", label: "function" },
+      { token: "return", label: "return" },
+      { token: "for", label: "loop" },
+      { token: "while", label: "loop" },
+      { token: "if", label: "branch" },
+      { token: "elseif", label: "branch" },
+      { token: "else", label: "branch" },
+      { token: "then", label: "block gate" },
+      { token: "loop", label: "loop gate" },
+      { token: "end", label: "block end" },
+      { token: "CLASS", label: "class" },
+      { token: "construct", label: "constructor" },
+      { token: "self", label: "instance ref" },
+      { token: "extends", label: "inheritance" },
+      { token: "EXCEPT", label: "exception remap" },
+      { token: "exoutput", label: "caught output" }
+    ];
+    const CONTROL_SET = new Set(["if", "elseif", "else", "for", "while", "end"]);
+    const KEYWORD_SET = new Set(["local", "global", "defi", "return", "then", "loop", "and", "or", "not", "construct", "extends", "self", "EXCEPT", "exoutput"]);
     const BOOLEAN_SET = new Set(["true", "false", "nil"]);
     const TYPE_SET = new Set(["CLASS"]);
-    const FUNCTION_HINTS = new Set(["print"]);
+    const BUILTIN_SET = new Set(["print", "len", "keys", "type", "raise", "error"]);
     const INDENT = "  ";
 
     const examples = {
-      fibonacci: `global count = 0
+      compatibility: `global total = 0
 
-defi fib(n)
-  if n <= 1 then
-    return n
-  end
-  return fib(n - 1) + fib(n - 2)
+defi add(amount)
+  total = total + amount
+  return total
 end
 
-for 8 then loop
-  print("fib(" .. i .. ") = " .. fib(i))
+for 3 then loop
+  print(add(i))
 end`,
-      classDemo: `CLASS Counter(value)
-  construct(start)
-    self.value = start
+      exceptionFlow: `EXCEPT["FriendlyDivideError", ZeroDivisionError] then
+  local divider = 0
+  raise("ZeroDivisionError", "divider cannot be zero")
+exoutput "Caught " .. exname .. ": " .. exmessage
+end
+
+print("Program kept going.")`,
+      classRunner: `CLASS Engine(power)
+  construct(startPower)
+    self.power = startPower
   end
 
-  defi add(self, amount)
-    self.value = self.value + amount
-    return self.value
+  defi boost(self, amount)
+    self.power = self.power + amount
+    return self.power
   end
 end
 
-local counter = Counter(4)
-print(counter.add(3))
-print(counter.value)`,
-      exceptions: `EXCEPT["FriendlyDivideError", ZeroDivisionError]
-
-local total = 10
-local divider = 0
-print(total / divider)`
+local engine = Engine(12)
+print(engine.boost(8))
+print(type(engine))`
     };
 
     let renderQueued = false;
     let runCount = 0;
 
     function escapeHtml(value) {
-      return value
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+      return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
     function tokenize(text) {
       const tokens = [];
       let index = 0;
-
       while (index < text.length) {
         const char = text[index];
         const next = text[index + 1];
-
         if (char === "-" && next === "-") {
           let end = index + 2;
-          while (end < text.length && text[end] !== "\n") {
-            end += 1;
-          }
+          while (end < text.length && text[end] !== "\n") end += 1;
           tokens.push({ type: "comment", value: text.slice(index, end) });
           index = end;
           continue;
         }
-
         if (char === '"') {
           let end = index + 1;
           while (end < text.length) {
             const current = text[end];
-            if (current === "\\") {
-              end += 2;
-              continue;
-            }
+            if (current === "\\") { end += 2; continue; }
             end += 1;
-            if (current === '"') {
-              break;
-            }
+            if (current === '"') break;
           }
           tokens.push({ type: "string", value: text.slice(index, end) });
           index = end;
           continue;
         }
-
         if (/\d/.test(char)) {
           let end = index + 1;
-          while (end < text.length && /[\d.]/.test(text[end])) {
-            end += 1;
-          }
+          while (end < text.length && /[\d.]/.test(text[end])) end += 1;
           tokens.push({ type: "number", value: text.slice(index, end) });
           index = end;
           continue;
         }
-
         if (/[A-Za-z_]/.test(char)) {
           let end = index + 1;
-          while (end < text.length && /[A-Za-z0-9_]/.test(text[end])) {
-            end += 1;
-          }
+          while (end < text.length && /[A-Za-z0-9_]/.test(text[end])) end += 1;
           const value = text.slice(index, end);
           const lower = value.toLowerCase();
           const nextChar = text[end];
           let type = "plain";
-
-          if (TYPE_SET.has(value)) {
-            type = "type";
-          } else if (CONTROL_SET.has(lower)) {
-            type = "control";
-          } else if (KEYWORD_SET.has(value) || KEYWORD_SET.has(lower)) {
-            type = "keyword";
-          } else if (BOOLEAN_SET.has(lower)) {
-            type = "boolean";
-          } else if (FUNCTION_HINTS.has(lower) || nextChar === "(") {
-            type = "function";
-          }
-
+          if (TYPE_SET.has(value)) type = "type";
+          else if (CONTROL_SET.has(lower)) type = "control";
+          else if (KEYWORD_SET.has(value) || KEYWORD_SET.has(lower)) type = "keyword";
+          else if (BOOLEAN_SET.has(lower)) type = "boolean";
+          else if (BUILTIN_SET.has(lower)) type = "builtin";
+          else if (nextChar === "(") type = "function";
           tokens.push({ type, value });
           index = end;
           continue;
         }
-
         if (char === "." && /[A-Za-z_]/.test(next || "")) {
           let end = index + 1;
-          while (end < text.length && /[A-Za-z0-9_]/.test(text[end])) {
-            end += 1;
-          }
+          while (end < text.length && /[A-Za-z0-9_]/.test(text[end])) end += 1;
           tokens.push({ type: "property", value: text.slice(index, end) });
           index = end;
           continue;
         }
-
         if (/\s/.test(char)) {
           let end = index + 1;
-          while (end < text.length && /\s/.test(text[end])) {
-            end += 1;
-          }
+          while (end < text.length && /\s/.test(text[end])) end += 1;
           tokens.push({ type: "plain", value: text.slice(index, end) });
           index = end;
           continue;
         }
-
         let end = index + 1;
-        if (["=", "!", "<", ">", "."].includes(char) && text[end] === "=") {
-          end += 1;
-        } else if (char === "." && text[end] === ".") {
-          end += 1;
-        }
+        if (["=", "!", "<", ">"].includes(char) && text[end] === "=") end += 1;
+        else if (char === "." && text[end] === ".") end += 1;
         tokens.push({ type: "operator", value: text.slice(index, end) });
         index = end;
       }
-
       return tokens;
+    }
+
+    function countKeywordUsage(text) {
+      const counts = new Map(KEYWORDS.map((item) => [item.token, 0]));
+      for (const item of KEYWORDS) {
+        const pattern = item.token === "CLASS" || item.token === "EXCEPT"
+          ? new RegExp(`\\b${item.token}\\b`, "g")
+          : new RegExp(`\\b${item.token}\\b`, "gi");
+        const matches = text.match(pattern);
+        counts.set(item.token, matches ? matches.length : 0);
+      }
+      return counts;
+    }
+
+    function analyzeCode(text) {
+      const lines = text.split("\n");
+      const results = [];
+      const stack = [];
+      let hasLegacyExcept = false;
+      let hasExceptBlock = false;
+      let hasExoutput = false;
+      lines.forEach((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("--")) return;
+        if (/^EXCEPT\s*\[/.test(trimmed)) {
+          if (/\bthen\s*$/i.test(trimmed)) {
+            stack.push({ type: "EXCEPT", line: index + 1 });
+            hasExceptBlock = true;
+          } else {
+            hasLegacyExcept = true;
+          }
+        }
+        if (/^(if|while)\b/.test(trimmed)) stack.push({ type: "block", line: index + 1 });
+        else if (/^for\b/.test(trimmed) && /\bthen\s+loop\b/.test(trimmed)) stack.push({ type: "block", line: index + 1 });
+        else if (/^defi\b/.test(trimmed) || /^CLASS\b/.test(trimmed) || /^construct\b/.test(trimmed)) stack.push({ type: "block", line: index + 1 });
+        if (/^exoutput\b/i.test(trimmed)) hasExoutput = true;
+        if (trimmed === "end") {
+          if (!stack.length) results.push({ severity: "error", title: "Orphan end", detail: `Line ${index + 1} closes a block that was never opened.` });
+          else stack.pop();
+        }
+      });
+      if (stack.length) results.push({ severity: "warning", title: "Possible missing end", detail: `A block opened near line ${stack[stack.length - 1].line} does not appear to be closed yet.` });
+      if (hasLegacyExcept && hasExceptBlock) results.push({ severity: "warning", title: "Mixed EXCEPT styles", detail: "Legacy remap EXCEPT and 0.6 EXCEPT blocks are both present. That is valid, but make sure each one is intentional." });
+      if (hasExoutput && !hasExceptBlock) results.push({ severity: "warning", title: "Loose exoutput", detail: "`exoutput` is meant for the new EXCEPT block flow and may not parse outside it." });
+      if (!text.trim()) results.push({ severity: "warning", title: "Empty buffer", detail: "Nothing to run yet." });
+      return results;
+    }
+
+    function renderKeywordRadar(text) {
+      const counts = countKeywordUsage(text);
+      const totalKeywords = Array.from(counts.values()).reduce((sum, value) => sum + value, 0);
+      heroKeywordCount.textContent = String(totalKeywords);
+      compatibilityMeta.textContent = counts.get("EXCEPT") || counts.get("local") || counts.get("defi") ? "0.5 features detected" : "ready for legacy syntax";
+      exceptionMeta.textContent = counts.get("exoutput") || /\braise\s*\(/i.test(text) ? "0.6 exception flow active" : "legacy + block catch";
+      keywordRadar.innerHTML = KEYWORDS.map((item) => `
+        <div class="item">
+          <div class="item-row">
+            <strong>${escapeHtml(item.token)}</strong>
+            <span>${counts.get(item.token) || 0} hit${(counts.get(item.token) || 0) === 1 ? "" : "s"}</span>
+          </div>
+          <div class="muted">${escapeHtml(item.label)}</div>
+        </div>`).join("");
+    }
+
+    function renderDiagnostics(text) {
+      const items = analyzeCode(text);
+      heroDiagnosticCount.textContent = String(items.length);
+      diagnostics.innerHTML = items.map((item) => `
+        <div class="item ${item.severity}">
+          <strong>${escapeHtml(item.title)}</strong>
+          <div class="muted">${escapeHtml(item.detail)}</div>
+        </div>`).join("") || `
+        <div class="item">
+          <strong>Buffer looks stable</strong>
+          <div class="muted">No obvious block-shape issues detected from the editor layer.</div>
+        </div>`;
     }
 
     function renderHighlight(text) {
@@ -764,32 +676,27 @@ print(total / divider)`
         const escaped = escapeHtml(value);
         return type === "plain" ? escaped : `<span class="token-${type}">${escaped}</span>`;
       }).join("");
-
       highlightedCode.innerHTML = `${html || " "}\n`;
     }
 
     function renderLineNumbers(text) {
       const count = Math.max(text.split("\n").length, 1);
       let numbers = "";
-      for (let i = 1; i <= count; i += 1) {
-        numbers += `${i}${i < count ? "\n" : ""}`;
-      }
+      for (let i = 1; i <= count; i += 1) numbers += `${i}${i < count ? "\n" : ""}`;
       lineNumbers.textContent = numbers;
     }
 
     function updateCursorMeta() {
       const before = codeInput.value.slice(0, codeInput.selectionStart);
       const lines = before.split("\n");
-      const line = lines.length;
-      const column = lines[lines.length - 1].length + 1;
-      cursorMeta.textContent = `Ln ${line}, Col ${column}`;
+      cursorMeta.textContent = `Ln ${lines.length}, Col ${lines[lines.length - 1].length + 1}`;
     }
 
     function updateBufferMeta() {
       const text = codeInput.value;
       const lineCount = Math.max(text.split("\n").length, 1);
       const charCount = text.length;
-      bufferMeta.textContent = `${lineCount} line${lineCount === 1 ? "" : "s"} · ${charCount} char${charCount === 1 ? "" : "s"}`;
+      bufferMeta.textContent = `${lineCount} line${lineCount === 1 ? "" : "s"} | ${charCount} char${charCount === 1 ? "" : "s"}`;
       emptyState.style.display = text.length === 0 ? "block" : "none";
     }
 
@@ -802,6 +709,8 @@ print(total / divider)`
       const text = codeInput.value;
       renderHighlight(text);
       renderLineNumbers(text);
+      renderKeywordRadar(text);
+      renderDiagnostics(text);
       updateCursorMeta();
       updateBufferMeta();
       syncScroll();
@@ -809,9 +718,7 @@ print(total / divider)`
     }
 
     function queueRefresh() {
-      if (renderQueued) {
-        return;
-      }
+      if (renderQueued) return;
       renderQueued = true;
       requestAnimationFrame(refreshEditor);
     }
@@ -823,32 +730,29 @@ print(total / divider)`
       codeInput.focus();
     }
 
-    function insertText(text, selectionStart = null, selectionEnd = null) {
-      const start = codeInput.selectionStart;
-      const end = codeInput.selectionEnd;
-      codeInput.setRangeText(text, start, end, "end");
-      if (selectionStart !== null && selectionEnd !== null) {
-        codeInput.selectionStart = selectionStart;
-        codeInput.selectionEnd = selectionEnd;
-      }
-      queueRefresh();
+    function currentLineIndent(value, cursor) {
+      const lineStart = value.lastIndexOf("\n", cursor - 1) + 1;
+      const line = value.slice(lineStart, cursor);
+      const match = line.match(/^\s+/);
+      return match ? match[0] : "";
+    }
+
+    function shouldIncreaseIndent(line) {
+      const trimmed = line.trim();
+      return /^EXCEPT\b.*\bthen$/i.test(trimmed) || /\b(defi|if|elseif|else|for|while|CLASS|construct)\b/.test(trimmed) || /\b(then|loop)\b\s*$/.test(trimmed);
     }
 
     function handleTab(event) {
-      if (event.key !== "Tab") {
-        return false;
-      }
+      if (event.key !== "Tab") return false;
       event.preventDefault();
       const start = codeInput.selectionStart;
       const end = codeInput.selectionEnd;
       const value = codeInput.value;
-
       if (start === end) {
         codeInput.setRangeText(INDENT, start, end, "end");
         queueRefresh();
         return true;
       }
-
       const lineStart = value.lastIndexOf("\n", start - 1) + 1;
       const selected = value.slice(lineStart, end);
       const indented = selected.split("\n").map((line) => `${INDENT}${line}`).join("\n");
@@ -859,22 +763,8 @@ print(total / divider)`
       return true;
     }
 
-    function currentLineIndent(value, cursor) {
-      const lineStart = value.lastIndexOf("\n", cursor - 1) + 1;
-      const line = value.slice(lineStart, cursor);
-      const match = line.match(/^\s+/);
-      return match ? match[0] : "";
-    }
-
-    function shouldIncreaseIndent(line) {
-      return /\b(defi|if|elseif|else|for|while|CLASS|construct)\b.*$/.test(line.trim()) || /\b(then|loop)\b\s*$/.test(line.trim());
-    }
-
     function handleEnter(event) {
-      if (event.key !== "Enter") {
-        return false;
-      }
-
+      if (event.key !== "Enter") return false;
       const start = codeInput.selectionStart;
       const end = codeInput.selectionEnd;
       const value = codeInput.value;
@@ -882,7 +772,6 @@ print(total / divider)`
       const lineText = value.slice(lineStart, start);
       const baseIndent = currentLineIndent(value, start);
       const nextIndent = shouldIncreaseIndent(lineText) ? baseIndent + INDENT : baseIndent;
-
       event.preventDefault();
       codeInput.setRangeText(`\n${nextIndent}`, start, end, "end");
       queueRefresh();
@@ -896,18 +785,10 @@ print(total / divider)`
 
     function formatRunOutput(payload) {
       const parts = [];
-      if (payload.stage) {
-        parts.push(`[${payload.stage.toUpperCase()}]`);
-      }
-      if (payload.stdout) {
-        parts.push(`STDOUT\n${payload.stdout.trimEnd()}`);
-      }
-      if (payload.stderr) {
-        parts.push(`STDERR\n${payload.stderr.trimEnd()}`);
-      }
-      if (payload.error) {
-        parts.push(`ERROR\n${payload.error}`);
-      }
+      if (payload.stage) parts.push(`[${payload.stage.toUpperCase()}]`);
+      if (payload.stdout) parts.push(`STDOUT\n${payload.stdout.trimEnd()}`);
+      if (payload.stderr) parts.push(`STDERR\n${payload.stderr.trimEnd()}`);
+      if (payload.error) parts.push(`ERROR\n${payload.error}`);
       return parts.join("\n\n") || "Done.";
     }
 
@@ -918,25 +799,22 @@ print(total / divider)`
         output.textContent = "Enter some Roadstone code before running.";
         return;
       }
-
       runBtn.disabled = true;
-      setStatus("busy", "Running…");
-      output.textContent = "Running Roadstone…";
+      setStatus("busy", "Running...");
+      output.textContent = "Running Roadstone...";
       const startedAt = performance.now();
-
       try {
         const response = await fetch("/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code })
         });
-
         const payload = await response.json();
         output.textContent = formatRunOutput(payload);
         setStatus(payload.error ? "error" : "", payload.error ? "Run failed" : "Run complete");
         runCount += 1;
-        const duration = Math.round(performance.now() - startedAt);
-        runMeta.textContent = `Run ${runCount} · ${duration} ms`;
+        heroRunCount.textContent = String(runCount);
+        runMeta.textContent = `Run ${runCount} | ${Math.round(performance.now() - startedAt)} ms`;
       } catch (error) {
         output.textContent = `Network error\n${error}`;
         setStatus("error", "Network error");
@@ -950,19 +828,15 @@ print(total / divider)`
     codeInput.addEventListener("click", updateCursorMeta);
     codeInput.addEventListener("keyup", updateCursorMeta);
     codeInput.addEventListener("select", updateCursorMeta);
-
     codeInput.addEventListener("keydown", (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
         event.preventDefault();
         runCode();
         return;
       }
-      if (handleTab(event)) {
-        return;
-      }
+      if (handleTab(event)) return;
       handleEnter(event);
     });
-
     runBtn.addEventListener("click", runCode);
     loadExampleBtn.addEventListener("click", () => setEditorValue(examples[exampleSelect.value]));
     exampleSelect.addEventListener("change", () => setEditorValue(examples[exampleSelect.value]));
@@ -971,18 +845,14 @@ print(total / divider)`
       try {
         await navigator.clipboard.writeText(output.textContent);
         copyOutputBtn.textContent = "Copied";
-        setTimeout(() => {
-          copyOutputBtn.textContent = "Copy output";
-        }, 1200);
+        setTimeout(() => { copyOutputBtn.textContent = "Copy output"; }, 1200);
       } catch (error) {
         output.textContent += `\n\nClipboard error\n${error}`;
       }
     });
-
     window.addEventListener("resize", syncScroll);
-
-    setEditorValue(examples.fibonacci);
-    runMeta.textContent = "Ready to run";
+    setEditorValue(examples.exceptionFlow);
+    runMeta.textContent = "Ready";
     refreshEditor();
   </script>
 </body>
