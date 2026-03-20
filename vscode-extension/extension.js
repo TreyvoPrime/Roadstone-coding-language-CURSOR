@@ -1,10 +1,11 @@
 const vscode = require("vscode");
+const fs = require("fs");
 const path = require("path");
-const { exec } = require("child_process");
+const { execFile } = require("child_process");
 
-function execPromise(cmd, options, outputChannel) {
+function execFilePromise(command, args, options, outputChannel) {
   return new Promise((resolve, reject) => {
-    exec(cmd, options, (err, stdout, stderr) => {
+    execFile(command, args, options, (err, stdout, stderr) => {
       if (stdout && outputChannel) {
         outputChannel.append(stdout);
       }
@@ -21,16 +22,22 @@ function execPromise(cmd, options, outputChannel) {
 }
 
 async function runRoadstone(activeUri) {
-  const folders = vscode.workspace.workspaceFolders;
-  if (!folders || folders.length === 0) {
-    vscode.window.showErrorMessage("Roadstone: open a folder first.");
+  const folder = vscode.workspace.getWorkspaceFolder(activeUri);
+  if (!folder) {
+    vscode.window.showErrorMessage("Roadstone: open the file inside a workspace folder first.");
     return;
   }
-  const root = folders[0].uri.fsPath;
+  const root = folder.uri.fsPath;
 
   const filePath = activeUri.fsPath;
   if (!filePath.toLowerCase().endsWith(".rd")) {
     vscode.window.showErrorMessage("Roadstone: active file must end with .rd");
+    return;
+  }
+
+  const sourcePath = path.join(root, "RoadstoneMain.java");
+  if (!fs.existsSync(sourcePath)) {
+    vscode.window.showErrorMessage("Roadstone: could not find RoadstoneMain.java in the workspace root.");
     return;
   }
 
@@ -42,25 +49,25 @@ async function runRoadstone(activeUri) {
   output.appendLine(`Roadstone: compiling RoadstoneMain.java...`);
 
   try {
-    await execPromise(`javac "${path.join(root, "RoadstoneMain.java")}"`, { cwd: root }, output);
+    await execFilePromise("javac", [sourcePath], { cwd: root }, output);
   } catch (e) {
     output.appendLine("");
     output.appendLine("Roadstone: javac failed.");
-    output.appendLine(String(e));
-    vscode.window.showErrorMessage("Roadstone: javac failed (see Output: Roadstone)");
+    output.appendLine(String(e?.message || e));
+    vscode.window.showErrorMessage("Roadstone: javac failed (see Output: Roadstone for details)");
     return;
   }
 
   output.appendLine("");
   output.appendLine(`Roadstone: running ${fileRel}...`);
   try {
-    await execPromise(`java -cp . RoadstoneMain "${fileRel}"`, { cwd: root }, output);
+    await execFilePromise("java", ["-cp", ".", "RoadstoneMain", fileRel], { cwd: root }, output);
     output.appendLine("");
     output.appendLine("Roadstone: done (no errors).");
   } catch (e) {
     output.appendLine("");
     output.appendLine("Roadstone: runtime error (see above output).");
-    output.appendLine(String(e));
+    output.appendLine(String(e?.message || e));
     vscode.window.showErrorMessage("Roadstone: runtime error (see Output: Roadstone)");
   }
 }
@@ -90,6 +97,9 @@ function activate(context) {
       return;
     }
     const doc = editor.document;
+    if (doc.isDirty) {
+      await doc.save();
+    }
     await runRoadstone(doc.uri);
   });
 
@@ -106,4 +116,3 @@ module.exports = {
   activate,
   deactivate
 };
-

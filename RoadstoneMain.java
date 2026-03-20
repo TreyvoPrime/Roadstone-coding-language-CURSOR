@@ -1,16 +1,19 @@
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Roadstone v0 interpreter (prototype).
+ * Roadstone v0.5 interpreter (prototype).
  *
  * Notes:
  * - No semicolons
@@ -26,12 +29,16 @@ import java.util.regex.Pattern;
  * - EXCEPT["NewName", OldName] error remapping (runtime inside blocks, parse/lexer via scanning source)
  * - while ... loop ... end
  * - for <count_expr> then loop ... end  (defines local iteration var `i` from 1..count)
+ * - for item in store loop ... end / for key, value in store loop ... end
  * - functions: defi name(params) ... end
  * - return: return <expr> OR return <paramName> write-back to call-site argument if it was an identifier lvalue
  * - classes: CLASS Name(fields...) ... end with construct and methods via defi inside class
+ * - Ask("question") / Ask(Int)("question") input helpers
+ * - analyze("ping", "127.0.0.1") networking helper
+ * - storage units via store(...)
  *
  * Notes:
- * - Lists/maps + indexing are implemented in this v0
+ * - Lists/maps + indexing are implemented, but now normalize into a single StorageUnit runtime container
  */
 public class RoadstoneMain {
 
@@ -125,6 +132,7 @@ public class RoadstoneMain {
         ASSIGN, // =
         LPAREN, RPAREN,
         COMMA,
+        SEMICOLON,
         DOT,
         LBRACKET, RBRACKET,
         LBRACE, RBRACE,
@@ -142,7 +150,11 @@ public class RoadstoneMain {
         AND, OR, NOT,
         TRUE, FALSE, NIL,
         CLASS, CONSTRUCT, SELF,
-        EXTENDS
+        EXTENDS,
+        IN,
+        STORE,
+        ANALYZE,
+        INPUT
     }
 
     static class Token {
@@ -264,6 +276,7 @@ public class RoadstoneMain {
                     case '(': return simple(TokenType.LPAREN, c);
                     case ')': return simple(TokenType.RPAREN, c);
                     case ',': return simple(TokenType.COMMA, c);
+                    case ';': return simple(TokenType.SEMICOLON, c);
                     case '.': return simple(TokenType.DOT, c);
                     case '[': return simple(TokenType.LBRACKET, c);
                     case ']': return simple(TokenType.RBRACKET, c);
@@ -372,6 +385,10 @@ public class RoadstoneMain {
                 case "self" -> TokenType.SELF;
                 case "extends" -> TokenType.EXTENDS;
                 case "EXCEPT" -> TokenType.EXCEPT;
+                case "in" -> TokenType.IN;
+                case "store" -> TokenType.STORE;
+                case "analyze" -> TokenType.ANALYZE;
+                case "input" -> TokenType.INPUT;
                 default -> null;
             };
         }
@@ -494,6 +511,20 @@ public class RoadstoneMain {
         ForStmt(Expr countExpr, Block body) { this.countExpr = countExpr; this.body = body; }
     }
 
+    static class ForEachStmt implements Stmt {
+        final String keyName;
+        final String valueName; // nullable; when null keyName receives each value
+        final Expr iterableExpr;
+        final Block body;
+
+        ForEachStmt(String keyName, String valueName, Expr iterableExpr, Block body) {
+            this.keyName = keyName;
+            this.valueName = valueName;
+            this.iterableExpr = iterableExpr;
+            this.body = body;
+        }
+    }
+
     static class FunctionDef implements Stmt {
         final String name;
         final List<String> params;
@@ -589,6 +620,24 @@ public class RoadstoneMain {
         final Expr obj;
         final Expr index;
         IndexAccess(Expr obj, Expr index) { this.obj = obj; this.index = index; }
+    }
+
+    static class StoreEntry {
+        final Expr key;
+        final Expr value;
+
+        StoreEntry(Expr key, Expr value) {
+            this.key = key;
+            this.value = value;
+        }
+    }
+
+    static class StoreLit implements Expr {
+        final List<StoreEntry> entries;
+
+        StoreLit(List<StoreEntry> entries) {
+            this.entries = entries;
+        }
     }
 
     // =========================
@@ -741,8 +790,25 @@ public class RoadstoneMain {
             return new WhileStmt(cond, body);
         }
 
-        private ForStmt parseFor() {
+        private Stmt parseFor() {
             consume(TokenType.FOR, "Expected 'for'");
+            if (check(TokenType.IDENT) || check(TokenType.SELF)) {
+                Token firstName = advance();
+                String secondName = null;
+                if (match(TokenType.COMMA)) {
+                    Token secondTok = (check(TokenType.SELF)) ? advance() : consume(TokenType.IDENT, "Expected iterator variable after ','");
+                    secondName = secondTok.lexeme;
+                }
+                if (match(TokenType.IN)) {
+                    Expr iterable = parseExpression();
+                    consume(TokenType.LOOP, "Expected 'loop' after iterable");
+                    skipOptionalNewlines();
+                    Block body = parseUntilBlockEnd(java.util.Set.of(TokenType.END));
+                    consume(TokenType.END, "Expected 'end' to close for loop");
+                    return new ForEachStmt(firstName.lexeme, secondName, iterable, body);
+                }
+                pos -= secondName == null ? 1 : 3;
+            }
             Expr count = parseExpression();
             consume(TokenType.THEN, "Expected 'then' after for count");
             consume(TokenType.LOOP, "Expected 'loop' after for then");
@@ -1012,10 +1078,19 @@ public class RoadstoneMain {
                     advance();
                     yield new VarExpr(t.lexeme);
                 }
+                case ANALYZE -> {
+                    advance();
+                    yield new VarExpr("analyze");
+                }
+                case INPUT -> {
+                    advance();
+                    yield new VarExpr("input");
+                }
                 case SELF -> {
                     advance();
                     yield new VarExpr(t.lexeme);
                 }
+                case STORE -> parseStoreLiteral();
                 case LPAREN -> {
                     consume(TokenType.LPAREN, "Expected '('");
                     Expr e = parseExpression();
@@ -1063,6 +1138,29 @@ public class RoadstoneMain {
         }
 
         // Helpers
+        private Expr parseStoreLiteral() {
+            consume(TokenType.STORE, "Expected 'store'");
+            consume(TokenType.LPAREN, "Expected '(' after store");
+            List<StoreEntry> entries = new ArrayList<>();
+            if (!check(TokenType.RPAREN)) {
+                entries.add(parseStoreEntry());
+                while (match(TokenType.COMMA)) {
+                    entries.add(parseStoreEntry());
+                }
+            }
+            consume(TokenType.RPAREN, "Expected ')'");
+            return new StoreLit(entries);
+        }
+
+        private StoreEntry parseStoreEntry() {
+            Expr first = parseExpression();
+            if (match(TokenType.SEMICOLON)) {
+                Expr value = parseExpression();
+                return new StoreEntry(first, value);
+            }
+            return new StoreEntry(null, first);
+        }
+
         private void skipNewlines() {
             while (check(TokenType.NEWLINE)) advance();
         }
@@ -1143,8 +1241,7 @@ public class RoadstoneMain {
                         throw new RoadstoneRuntimeError("ArgumentError", "len(value) expects 1 argument");
                     }
                     Object v = args.get(0);
-                    if (v instanceof List<?> lst) return (double) lst.size();
-                    if (v instanceof Map<?, ?> map) return (double) map.size();
+                    if (v instanceof StorageUnit store) return (double) store.size();
                     if (v instanceof String s) return (double) s.length();
                     if (v instanceof RoadInstance inst) return (double) inst.props.size();
                     throw new RoadstoneRuntimeError("TypeError", "len() unsupported for this value");
@@ -1155,15 +1252,122 @@ public class RoadstoneMain {
                 @Override
                 public Object call(Interpreter itp, List<Object> args) {
                     if (args.size() != 1) {
-                        throw new RoadstoneRuntimeError("ArgumentError", "keys(map) expects 1 argument");
+                        throw new RoadstoneRuntimeError("ArgumentError", "keys(store) expects 1 argument");
                     }
                     Object v = args.get(0);
-                    if (!(v instanceof Map<?, ?> map)) {
-                        throw new RoadstoneRuntimeError("TypeError", "keys() expects a map");
+                    if (!(v instanceof StorageUnit store)) {
+                        throw new RoadstoneRuntimeError("TypeError", "keys() expects a storage unit");
                     }
-                    List<Object> out = new ArrayList<>();
-                    for (Object k : map.keySet()) out.add(k);
-                    return out;
+                    return store.keysAsStore();
+                }
+            });
+
+            globals.put("values", new BuiltinFunction("values") {
+                @Override
+                public Object call(Interpreter itp, List<Object> args) {
+                    if (args.size() != 1) {
+                        throw new RoadstoneRuntimeError("ArgumentError", "values(store) expects 1 argument");
+                    }
+                    Object v = args.get(0);
+                    if (!(v instanceof StorageUnit store)) {
+                        throw new RoadstoneRuntimeError("TypeError", "values() expects a storage unit");
+                    }
+                    return store.valuesAsStore();
+                }
+            });
+
+            globals.put("sort", new BuiltinFunction("sort") {
+                @Override
+                public Object call(Interpreter itp, List<Object> args) {
+                    if (args.size() != 1) {
+                        throw new RoadstoneRuntimeError("ArgumentError", "sort(store) expects 1 argument");
+                    }
+                    Object v = args.get(0);
+                    if (!(v instanceof StorageUnit store)) {
+                        throw new RoadstoneRuntimeError("TypeError", "sort() expects a storage unit");
+                    }
+                    return store.sortedCopy();
+                }
+            });
+
+            globals.put("push", new BuiltinFunction("push") {
+                @Override
+                public Object call(Interpreter itp, List<Object> args) {
+                    if (args.size() != 2) {
+                        throw new RoadstoneRuntimeError("ArgumentError", "push(store, value) expects 2 arguments");
+                    }
+                    Object target = args.get(0);
+                    if (!(target instanceof StorageUnit store)) {
+                        throw new RoadstoneRuntimeError("TypeError", "push() expects a storage unit");
+                    }
+                    store.putAuto(args.get(1));
+                    return target;
+                }
+            });
+
+            globals.put("contains", new BuiltinFunction("contains") {
+                @Override
+                public Object call(Interpreter itp, List<Object> args) {
+                    if (args.size() != 2) {
+                        throw new RoadstoneRuntimeError("ArgumentError", "contains(value, search) expects 2 arguments");
+                    }
+                    Object container = args.get(0);
+                    Object needle = args.get(1);
+                    if (container instanceof String s) return s.contains(stringify(needle));
+                    if (container instanceof StorageUnit store) return store.containsValue(needle) || store.containsKey(needle);
+                    throw new RoadstoneRuntimeError("TypeError", "contains() expects a string or storage unit");
+                }
+            });
+
+            globals.put("Int", new BuiltinFunction("Int") {
+                @Override
+                public Object call(Interpreter itp, List<Object> args) {
+                    if (args.size() != 1) {
+                        throw new RoadstoneRuntimeError("ArgumentError", "Int(value) expects 1 argument");
+                    }
+                    Object v = args.get(0);
+                    if (v instanceof Double d) return (double) toInt(d, "Int() expects a whole number or numeric string");
+                    if (v instanceof String s) {
+                        try {
+                            return (double) Integer.parseInt(s.trim());
+                        } catch (NumberFormatException ex) {
+                            throw new RoadstoneRuntimeError("TypeError", "Int() could not parse '" + s + "'");
+                        }
+                    }
+                    throw new RoadstoneRuntimeError("TypeError", "Int() expects a number or string");
+                }
+            });
+
+            globals.put("Ask", new BuiltinFunction("Ask") {
+                @Override
+                public Object call(Interpreter itp, List<Object> args) {
+                    if (args.size() == 1 && args.get(0) instanceof String prompt) {
+                        return askValue(prompt, null);
+                    }
+                    if (args.size() == 1 && args.get(0) instanceof BuiltinFunction converter) {
+                        return new BuiltinFunction("Ask<" + converter.name + ">") {
+                            @Override
+                            public Object call(Interpreter nestedItp, List<Object> nestedArgs) {
+                                if (nestedArgs.size() != 1 || !(nestedArgs.get(0) instanceof String prompt)) {
+                                    throw new RoadstoneRuntimeError("ArgumentError", "Ask(Type)(\"question\") expects a single prompt string");
+                                }
+                                return askValue(prompt, converter);
+                            }
+                        };
+                    }
+                    throw new RoadstoneRuntimeError("ArgumentError", "Ask(\"question\") or Ask(Int)(\"question\") expected");
+                }
+            });
+
+            globals.put("analyze", new BuiltinFunction("analyze") {
+                @Override
+                public Object call(Interpreter itp, List<Object> args) {
+                    if (args.isEmpty() || args.size() > 2) {
+                        throw new RoadstoneRuntimeError("ArgumentError", "analyze(mode, target?) expects 1 or 2 arguments");
+                    }
+                    String mode = stringify(args.get(0)).toLowerCase();
+                    String target = args.size() >= 2 ? stringify(args.get(1)) : "";
+                    return analyzeNetwork(mode, target);
                 }
             });
 
@@ -1178,12 +1382,14 @@ public class RoadstoneMain {
                     if (v instanceof Double) return "number";
                     if (v instanceof String) return "string";
                     if (v instanceof Boolean) return "boolean";
-                    if (v instanceof List<?>) return "list";
-                    if (v instanceof Map<?, ?>) return "map";
+                    if (v instanceof StorageUnit) return "store";
                     if (v instanceof RoadInstance) return "object";
+                    if (v instanceof BuiltinFunction) return "builtin";
                     return "unknown";
                 }
             });
+
+            globals.put("input", globals.get("Ask"));
         }
 
         void execute(Program program) {
@@ -1313,6 +1519,39 @@ public class RoadstoneMain {
                 return null;
             }
 
+            if (stmt instanceof ForEachStmt fe) {
+                Object iterable = evalExpr(env, fe.iterableExpr, null);
+                if (iterable instanceof StorageUnit store) {
+                    if (fe.valueName == null) {
+                        for (Object value : store.entryValues()) {
+                            Env loopEnv = new Env(env);
+                            loopEnv.locals.put(fe.keyName, value);
+                            execBlock(loopEnv, fe.body);
+                        }
+                    } else {
+                        for (Map.Entry<Object, Object> entry : store.entrySet()) {
+                            Env loopEnv = new Env(env);
+                            loopEnv.locals.put(fe.keyName, entry.getKey());
+                            loopEnv.locals.put(fe.valueName, entry.getValue());
+                            execBlock(loopEnv, fe.body);
+                        }
+                    }
+                    return null;
+                }
+                if (iterable instanceof String s) {
+                    for (int idx = 0; idx < s.length(); idx++) {
+                        Env loopEnv = new Env(env);
+                        loopEnv.locals.put(fe.keyName, String.valueOf(s.charAt(idx)));
+                        if (fe.valueName != null) {
+                            loopEnv.locals.put(fe.valueName, (double) (idx + 1));
+                        }
+                        execBlock(loopEnv, fe.body);
+                    }
+                    return null;
+                }
+                throw new RoadstoneRuntimeError("TypeError", "for ... in expects a storage unit or string");
+            }
+
             if (stmt instanceof FunctionDef fd) {
                 RoadFunction fn = new RoadFunction(fd.params, fd.body, env);
                 globals.put(fd.name, fn);
@@ -1379,16 +1618,27 @@ public class RoadstoneMain {
             if (expr instanceof NilLit) return null;
             if (expr instanceof VarExpr v) return getVar(env, v.name);
             if (expr instanceof ListLit l) {
-                List<Object> out = new ArrayList<>();
-                for (Expr e : l.elements) out.add(evalExpr(env, e, callContext));
+                StorageUnit out = new StorageUnit();
+                for (Expr e : l.elements) out.putAuto(evalExpr(env, e, callContext));
                 return out;
             }
             if (expr instanceof MapLit m) {
-                Map<Object, Object> out = new HashMap<>();
+                StorageUnit out = new StorageUnit();
                 for (int i = 0; i < m.keys.size(); i++) {
                     Object k = evalExpr(env, m.keys.get(i), callContext);
                     Object v = evalExpr(env, m.values.get(i), callContext);
                     out.put(k, v);
+                }
+                return out;
+            }
+            if (expr instanceof StoreLit s) {
+                StorageUnit out = new StorageUnit();
+                for (StoreEntry entry : s.entries) {
+                    if (entry.key == null) {
+                        out.putAuto(evalExpr(env, entry.value, callContext));
+                    } else {
+                        out.put(evalExpr(env, entry.key, callContext), evalExpr(env, entry.value, callContext));
+                    }
                 }
                 return out;
             }
@@ -1424,8 +1674,8 @@ public class RoadstoneMain {
                     }
                     return ((List<?>) obj).get(zero);
                 }
-                if (obj instanceof Map<?, ?> map) {
-                    return ((Map<?, ?>) map).get(idxV);
+                if (obj instanceof StorageUnit store) {
+                    return store.get(idxV);
                 }
                 throw new RoadstoneRuntimeError("TypeError", "attempted indexing on unsupported value");
             }
@@ -1582,10 +1832,8 @@ public class RoadstoneMain {
                     mut.set(zero, value);
                     return;
                 }
-                if (obj instanceof Map<?, ?> map) {
-                    @SuppressWarnings("unchecked")
-                    Map<Object, Object> mut = (Map<Object, Object>) obj;
-                    mut.put(idxV, value);
+                if (obj instanceof StorageUnit store) {
+                    store.put(idxV, value);
                     return;
                 }
                 throw new RoadstoneRuntimeError("TypeError", "attempted indexing assignment on unsupported value");
@@ -1630,7 +1878,153 @@ public class RoadstoneMain {
                 if (Math.abs(d - Math.rint(d)) < 1e-9) return String.valueOf((long) Math.rint(d));
                 return String.valueOf(d);
             }
+            if (v instanceof StorageUnit store) return store.toDisplayString();
             return String.valueOf(v);
+        }
+
+        private Object askValue(String prompt, BuiltinFunction converter) {
+            System.out.print(prompt);
+            Scanner scanner = new Scanner(System.in);
+            String raw = scanner.nextLine();
+            if (converter == null) {
+                return raw;
+            }
+            return converter.call(this, List.of(raw));
+        }
+
+        private StorageUnit analyzeNetwork(String mode, String target) {
+            try {
+                StorageUnit result = new StorageUnit();
+                result.put("mode", mode);
+                if ("local".equals(mode) || "localhost".equals(mode)) {
+                    InetAddress local = InetAddress.getLocalHost();
+                    result.put("address", local.getHostAddress());
+                    result.put("hostname", local.getHostName());
+                    return result;
+                }
+
+                if (target.isBlank()) {
+                    throw new RoadstoneRuntimeError("ArgumentError", "analyze(\"" + mode + "\", target) needs a target");
+                }
+
+                InetAddress addr = InetAddress.getByName(target);
+                result.put("target", target);
+                result.put("address", addr.getHostAddress());
+                result.put("hostname", addr.getCanonicalHostName());
+
+                switch (mode) {
+                    case "ping" -> result.put("reachable", addr.isReachable(2000));
+                    case "resolve", "lookup", "host" -> result.put("resolved", true);
+                    default -> throw new RoadstoneRuntimeError("ArgumentError", "analyze() unsupported mode '" + mode + "'");
+                }
+                return result;
+            } catch (RoadstoneRuntimeError ex) {
+                throw ex;
+            } catch (IOException ex) {
+                throw new RoadstoneRuntimeError("NetworkError", ex.getMessage());
+            }
+        }
+
+        class StorageUnit {
+            private final LinkedHashMap<Object, Object> entries = new LinkedHashMap<>();
+            private int nextAutoIndex = 1;
+
+            void putAuto(Object value) {
+                while (entries.containsKey((double) nextAutoIndex)) {
+                    nextAutoIndex++;
+                }
+                entries.put((double) nextAutoIndex, value);
+                nextAutoIndex++;
+            }
+
+            void put(Object key, Object value) {
+                Object normalized = normalizeKey(key);
+                entries.put(normalized, value);
+                if (normalized instanceof Double d && Math.abs(d - Math.rint(d)) < 1e-9 && d >= nextAutoIndex) {
+                    nextAutoIndex = ((int) Math.rint(d)) + 1;
+                }
+            }
+
+            Object get(Object key) {
+                return entries.get(normalizeKey(key));
+            }
+
+            boolean containsKey(Object key) {
+                return entries.containsKey(normalizeKey(key));
+            }
+
+            boolean containsValue(Object value) {
+                return entries.containsValue(value);
+            }
+
+            int size() {
+                return entries.size();
+            }
+
+            List<Map.Entry<Object, Object>> entrySet() {
+                return new ArrayList<>(entries.entrySet());
+            }
+
+            List<Object> entryValues() {
+                return new ArrayList<>(entries.values());
+            }
+
+            StorageUnit keysAsStore() {
+                StorageUnit out = new StorageUnit();
+                for (Object key : entries.keySet()) out.putAuto(key);
+                return out;
+            }
+
+            StorageUnit valuesAsStore() {
+                StorageUnit out = new StorageUnit();
+                for (Object value : entries.values()) out.putAuto(value);
+                return out;
+            }
+
+            StorageUnit sortedCopy() {
+                List<Map.Entry<Object, Object>> sorted = new ArrayList<>(entries.entrySet());
+                boolean sequentialNumericKeys = true;
+                int expected = 1;
+                for (Object key : entries.keySet()) {
+                    if (!(key instanceof Double d) || Math.abs(d - expected) > 1e-9) {
+                        sequentialNumericKeys = false;
+                        break;
+                    }
+                    expected++;
+                }
+
+                StorageUnit out = new StorageUnit();
+                if (sequentialNumericKeys) {
+                    List<Object> values = new ArrayList<>(entries.values());
+                    values.sort((a, b) -> stringify(a).compareToIgnoreCase(stringify(b)));
+                    for (Object value : values) out.putAuto(value);
+                    return out;
+                }
+
+                sorted.sort((a, b) -> stringify(a.getKey()).compareToIgnoreCase(stringify(b.getKey())));
+                for (Map.Entry<Object, Object> entry : sorted) {
+                    out.put(entry.getKey(), entry.getValue());
+                }
+                return out;
+            }
+
+            String toDisplayString() {
+                StringBuilder sb = new StringBuilder("store(");
+                boolean first = true;
+                for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+                    if (!first) sb.append(", ");
+                    sb.append(stringify(entry.getKey())).append(";").append(stringify(entry.getValue()));
+                    first = false;
+                }
+                sb.append(")");
+                return sb.toString();
+            }
+
+            private Object normalizeKey(Object key) {
+                if (key instanceof Integer i) return (double) i;
+                if (key instanceof Double d && Math.abs(d - Math.rint(d)) < 1e-9) return (double) Math.rint(d);
+                return key;
+            }
         }
 
         // Function values
@@ -1857,4 +2251,3 @@ public class RoadstoneMain {
     // Patch: member access currently only supports properties.
     // We keep this placeholder to avoid changing many lines.
 }
-

@@ -1,6 +1,13 @@
-# Roadstone Language (v0) Documentation Sheet
+# Roadstone Language (v0.5) Documentation Sheet
 
 This sheet documents the syntax and runtime behavior implemented by the current `RoadstoneMain.java` interpreter prototype.
+
+## v0.5 upgrade highlights
+- `Ask("prompt")` and typed prompts such as `Ask(Int)("How many?")`
+- `store(...)` literals for a unified storage unit container
+- `for item in values loop` and `for key, value in values loop`
+- extra builtins: `values`, `sort`, `push`, `contains`
+- networking helper: `analyze("ping", "127.0.0.1")`
 
 ## Quick Notes / Rules
 - No semicolons
@@ -16,7 +23,7 @@ This sheet documents the syntax and runtime behavior implemented by the current 
 ```
 
 ## Keywords
-`local`, `global`, `for`, `then`, `loop`, `end`, `if`, `elseif`, `else`, `while`, `defi`, `return`, `and`, `or`, `not`, `true`, `false`, `nil`, `CLASS`, `construct`, `self`, `extends`, `EXCEPT`
+`local`, `global`, `for`, `in`, `then`, `loop`, `end`, `if`, `elseif`, `else`, `while`, `defi`, `return`, `and`, `or`, `not`, `true`, `false`, `nil`, `CLASS`, `construct`, `self`, `extends`, `EXCEPT`, `store`, `analyze`, `input`
 
 ## Variables and Scopes
 
@@ -386,4 +393,3 @@ If you remember nothing else:
   - list: `[ ... ]` (1-based index)
   - map: `{ key: value, ... }`
 - errors: `EXCEPT["New", Old]`
-
