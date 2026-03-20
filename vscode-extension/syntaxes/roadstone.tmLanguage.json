@@ -34,11 +34,11 @@
       "patterns": [
         {
           "name": "keyword.control.roadstone",
-          "match": "\\b(if|elseif|else|while|for|then|loop|end|return|and|or|not|EXCEPT)\\b"
+          "match": "\\b(if|elseif|else|while|for|then|loop|end|return|and|or|not|in|EXCEPT|analyze|input)\\b"
         },
         {
           "name": "storage.modifier.roadstone",
-          "match": "\\b(local|global)\\b"
+          "match": "\\b(local|global|store)\\b"
         },
         {
           "name": "storage.type.class.roadstone",
@@ -58,7 +58,7 @@
       "patterns": [
         {
           "name": "support.type.roadstone",
-          "match": "\\b(type|len|keys)\\b"
+          "match": "\\b(type|len|keys|values|sort|push|contains|Ask|Int)\\b"
         }
       ]
     },
@@ -93,7 +93,7 @@
         },
         {
           "name": "punctuation.separator.comma.roadstone",
-          "match": ","
+          "match": "[,;]"
         },
         {
           "name": "punctuation.section.parens.roadstone",
@@ -113,4 +113,3 @@
   "fileTypes": ["rd"],
   "uuid": "e7e86c76-2f3d-4f3d-9a4b-fb7f2c2b0c01"
 }
-
