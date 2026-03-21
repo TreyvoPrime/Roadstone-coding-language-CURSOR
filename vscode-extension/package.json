@@ -1,16 +1,28 @@
 {
   "name": "roadstone-language",
   "displayName": "Roadstone",
-  "description": "Roadstone (.rd) language support and run command",
-  "version": "0.6.0",
+  "description": "Roadstone (.rd) language support, snippets, docs access, and runner integration",
+  "version": "0.6.1",
   "publisher": "local",
   "engines": {
     "vscode": "^1.90.0"
   },
-  "categories": ["Programming Languages"],
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "roadstone",
+    "language",
+    "syntax-highlighting",
+    "interpreter"
+  ],
+  "scripts": {
+    "package": "vsce package"
+  },
   "activationEvents": [
     "onLanguage:roadstone",
-    "onCommand:roadstone.runCurrentFile"
+    "onCommand:roadstone.runCurrentFile",
+    "onCommand:roadstone.openHelp"
   ],
   "main": "extension.js",
   "contributes": {
@@ -50,7 +62,45 @@
         "key": "ctrl+shift+h",
         "when": "editorLangId == roadstone"
       }
-    ]
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "roadstone.runCurrentFile",
+          "when": "resourceLangId == roadstone",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "roadstone.runCurrentFile",
+          "when": "resourceLangId == roadstone",
+          "group": "navigation"
+        },
+        {
+          "command": "roadstone.openHelp",
+          "when": "resourceLangId == roadstone",
+          "group": "navigation@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "roadstone.runCurrentFile",
+          "when": "resourceExtname == .rd",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Roadstone",
+      "properties": {
+        "roadstone.runtimePath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to `roadstone.cmd`, `roadstone-cli.js`, or a folder containing one of them. If blank, the extension searches upward from the current file inside the workspace."
+        }
+      }
+    }
   }
 }
 

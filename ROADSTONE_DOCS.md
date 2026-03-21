@@ -2,6 +2,18 @@
 
 This sheet documents the syntax and runtime behavior implemented by the current `RoadstoneMain.java` interpreter prototype.
 
+## v0.6 highlights
+- catch-style EXCEPT blocks with `then ... exoutput ... end`
+- `raise(...)` and `error(...)` for manual runtime errors
+- catch context variables: `exname`, `extarget`, `exmessage`
+
+## v0.5 features still available
+- `Ask("prompt")` and typed prompts such as `Ask(Int)("How many?")`
+- `store(...)` literals for a unified storage unit container
+- `for item in values loop` and `for key, value in values loop`
+- extra builtins: `values`, `sort`, `push`, `contains`
+- networking helper: `analyze("ping", "127.0.0.1")`
+
 ## Quick Notes / Rules
 - No semicolons
 - Blocks end with `end`
@@ -16,7 +28,7 @@ This sheet documents the syntax and runtime behavior implemented by the current 
 ```
 
 ## Keywords
-`local`, `global`, `for`, `then`, `loop`, `end`, `if`, `elseif`, `else`, `while`, `defi`, `return`, `and`, `or`, `not`, `true`, `false`, `nil`, `CLASS`, `construct`, `self`, `extends`, `EXCEPT`, `exoutput`
+`local`, `global`, `for`, `in`, `then`, `loop`, `end`, `if`, `elseif`, `else`, `while`, `defi`, `return`, `and`, `or`, `not`, `true`, `false`, `nil`, `CLASS`, `construct`, `self`, `extends`, `EXCEPT`, `exoutput`, `store`, `analyze`, `input`
 
 ## Variables and Scopes
 
@@ -426,4 +438,3 @@ If you remember nothing else:
   - legacy remap: `EXCEPT["New", Old]`
   - catch block: `EXCEPT["New", Old] then ... exoutput ... end`
   - manual raise: `raise("MyError", "details")`
-

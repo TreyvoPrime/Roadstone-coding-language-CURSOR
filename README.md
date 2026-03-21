@@ -1,68 +1,111 @@
 # Roadstone 0.6
 
-This repo contains the Roadstone interpreter in Java, a rebuilt orange-black web IDE, and a VS Code extension for running and authoring `.rd` files.
+Roadstone 0.6 is the current version of the language in this repo. This release expands the runtime, adds stronger error handling, and improves the editor/tooling story with a VS Code extension and CLI wrappers.
 
-## Run
+## 0.6 Update Log
 
-1. Run (wrapper scripts)
-   - PowerShell: `.\run.ps1 examples/hello.rd`
-   - CMD: `.\run.bat examples\hello.rd`
+### Added in 0.6
 
-2. Or manually
-   - Compile: `javac RoadstoneMain.java`
-   - Run: `java -cp . RoadstoneMain examples/hello.rd`
+- Catch-style exception handling with:
+  - `EXCEPT["NewErrorName", OldErrorName] then ... exoutput ... end`
+- Catch output support with:
+  - `exoutput`
+- Catch context values:
+  - `exname`
+  - `extarget`
+  - `exmessage`
+- Manual runtime error helpers:
+  - `raise(name, message)`
+  - `error(name, message)`
+- Example program for the new EXCEPT flow:
+  - `examples/except_v06.rd`
 
-## VS Code (optional)
-This repo also includes a tiny VS Code extension under `vscode-extension/` that adds:
-- `Roadstone: Run Current .rd file`
+### Features available in the current 0.6 language build
 
-To try it quickly:
-- Open `vscode-extension/` in a VS Code Extension Development Host (use `F5` from the Extensions panel)
-- Open any `*.rd` file from this repo in that host window
-- Run the command from Command Palette
+- Block-based syntax with `end`
+- Comments with `--`
+- `if / elseif / else`
+- `while ... loop`
+- counted `for ... then loop`
+- foreach `for item in store loop`
+- local/global declarations
+- reassignment of declared variables
+- functions with `defi`
+- write-back returns with `return <paramName>`
+- classes with `CLASS`, `construct`, methods, and `extends`
+- list literals with `[ ... ]`
+- map literals with `{ key: value }`
+- indexing support
+- `store(...)` storage units
+- builtins:
+  - `print`
+  - `len`
+  - `keys`
+  - `values`
+  - `sort`
+  - `push`
+  - `contains`
+  - `type`
+  - `Ask`
+  - `Int`
+  - `analyze`
 
-## Roadstone Docs
-For a full syntax + behavior sheet, see `ROADSTONE_DOCS.md`.
+### Tooling around 0.6
 
-## Supported syntax in 0.6
+- `roadstone-cli.js` and `roadstone.cmd` for easier command-line execution
+- VS Code extension with:
+  - syntax highlighting
+  - completions
+  - snippets
+  - run command for `.rd` files
+  - docs command
+- updated web editor/runtime files under `web-runner/`
 
-- No semicolons
-- Block terminator: `end`
-- Comments: `-- ...`
-- `if <cond> then ... elseif <cond> then ... else ... end` (no colon after `then`/`else`)
-- `for <count_expr> then loop ... end` (defines local `i` from `1..count`)
-- `while <cond> loop ... end`
-- Variables
-  - `local x = ...` makes `x` local
-  - `global x = ...` makes `x` global
-  - `x = ...` updates an existing `local` or `global` (you must declare with `local` or `global` first)
-- Functions
-  - `defi name(a, b) ... end`
-  - `return` works
--  **Write-back return (your rule):** `return <paramName>` updates the caller’s argument variable when that argument was an identifier lvalue
-- Classes (minimal)
-  - `CLASS Name(field1, field2, ...) ... end`
-  - `construct(p1, p2, ...) ... end` uses `self.<field> = ...`
-  - Methods: `defi methodName(self, ...) ... end`
-  - Instantiate by calling the class like a function: `local obj = Name(arg1, arg2)`
-- Inheritance (methods only for v0)
-  - `CLASS Child(...) extends Parent` enables inherited method lookup
-- Lists / Maps / Indexing
-  - List literal: `[expr1, expr2, ...]`
-  - Map literal: `{ keyExpr: valueExpr, ... }`
-  - Indexing: `obj[index]` (1-based for lists)
-- Error handling
-  - Legacy remap still works: `EXCEPT["NewErrorName", OldErrorName]`
-  - New 0.6 catch block: `EXCEPT["NewErrorName", OldErrorName] then ... exoutput ... end`
-  - Manual runtime errors: `raise(name, message)` or `error(name, message)`
-  - `exoutput` can use `exname`, `extarget`, and `exmessage` after a catch succeeds
+## Run Roadstone
 
-## Examples
+### Wrapper scripts
+
+- PowerShell:
+  - `.\run.ps1 examples/hello.rd`
+- CMD:
+  - `.\run.bat examples\hello.rd`
+- CLI wrapper:
+  - `.\roadstone.cmd examples\hello.rd`
+
+### Manual
+
+- Compile:
+  - `javac RoadstoneMain.java`
+- Run:
+  - `java -cp . RoadstoneMain examples/hello.rd`
+
+## VS Code
+
+The extension lives in [vscode-extension](C:\Users\trey2\Roadstone-coding-language-CURSOR\vscode-extension).
+
+Build a downloadable package:
+
+```powershell
+cd vscode-extension
+npm install -g @vscode/vsce
+vsce package
+```
+
+Install the `.vsix` locally:
+
+```powershell
+code --install-extension roadstone-language-0.6.1.vsix
+```
+
+## Docs
+
+For the full syntax and behavior sheet, see [ROADSTONE_DOCS.md](C:\Users\trey2\Roadstone-coding-language-CURSOR\ROADSTONE_DOCS.md).
+
+## Example Programs
 
 - `examples/hello.rd`
 - `examples/if_test.rd`
 - `examples/loops.rd`
-
 - `examples/return_writeback.rd`
 - `examples/return_normal.rd`
 - `examples/return_global_writeback.rd`
@@ -73,4 +116,4 @@ For a full syntax + behavior sheet, see `ROADSTONE_DOCS.md`.
 - `examples/except_test.rd`
 - `examples/except_index_test.rd`
 - `examples/except_parse_test.rd`
-
+- `examples/except_v06.rd`

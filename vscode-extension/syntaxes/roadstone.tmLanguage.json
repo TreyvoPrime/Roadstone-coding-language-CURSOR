@@ -6,10 +6,13 @@
       "include": "#comments"
     },
     {
+      "include": "#definitions"
+    },
+    {
       "include": "#keywords"
     },
     {
-      "include": "#types"
+      "include": "#builtins"
     },
     {
       "include": "#numbers"
@@ -30,11 +33,23 @@
         }
       ]
     },
+    "definitions": {
+      "patterns": [
+        {
+          "name": "entity.name.class.roadstone",
+          "match": "(?<=\\bCLASS\\s)([A-Za-z_][A-Za-z0-9_]*)"
+        },
+        {
+          "name": "entity.name.function.roadstone",
+          "match": "(?<=\\bdefi\\s)([A-Za-z_][A-Za-z0-9_]*)"
+        }
+      ]
+    },
     "keywords": {
       "patterns": [
         {
           "name": "keyword.control.roadstone",
-          "match": "\\b(if|elseif|else|while|for|then|loop|end|return|and|or|not|EXCEPT|exoutput)\\b"
+          "match": "\\b(if|elseif|else|while|for|in|then|loop|end|return|and|or|not|EXCEPT|exoutput)\\b"
         },
         {
           "name": "storage.modifier.roadstone",
@@ -42,11 +57,15 @@
         },
         {
           "name": "storage.type.class.roadstone",
-          "match": "\\b(CLASS|construct|extends|self)\\b"
+          "match": "\\b(CLASS|construct|extends)\\b"
         },
         {
           "name": "storage.type.function.roadstone",
           "match": "\\bdefi\\b"
+        },
+        {
+          "name": "variable.language.roadstone",
+          "match": "\\b(self|exname|extarget|exmessage)\\b"
         },
         {
           "name": "constant.language.boolean.roadstone",
@@ -54,11 +73,11 @@
         }
       ]
     },
-    "types": {
+    "builtins": {
       "patterns": [
         {
-          "name": "support.type.roadstone",
-          "match": "\\b(type|len|keys|raise|error|print)\\b"
+          "name": "support.function.builtin.roadstone",
+          "match": "\\b(print|len|keys|values|sort|push|contains|type|raise|error|Ask|Int|analyze|input|store)\\b"
         }
       ]
     },
@@ -89,11 +108,15 @@
       "patterns": [
         {
           "name": "keyword.operator.roadstone",
-          "match": "(==|!=|<=|>=|<|>|\\+|-|\\*|/|%|\\.\\.)"
+          "match": "(==|!=|<=|>=|<|>|\\+|-|\\*|/|%|\\.\\.|=)"
+        },
+        {
+          "name": "punctuation.separator.key-value.roadstone",
+          "match": ":"
         },
         {
           "name": "punctuation.separator.comma.roadstone",
-          "match": ","
+          "match": "[,;]"
         },
         {
           "name": "punctuation.section.parens.roadstone",
@@ -110,7 +133,8 @@
       ]
     }
   },
-  "fileTypes": ["rd"],
+  "fileTypes": [
+    "rd"
+  ],
   "uuid": "e7e86c76-2f3d-4f3d-9a4b-fb7f2c2b0c01"
 }
-
