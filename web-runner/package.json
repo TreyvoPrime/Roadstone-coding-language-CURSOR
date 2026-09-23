@@ -1,6 +1,6 @@
 {
   "name": "roadstone-web-runner",
-  "version": "0.0.1",
+  "version": "0.6.0",
   "private": true,
   "description": "Local web UI to run Roadstone code via the Java interpreter",
   "main": "server.js",
