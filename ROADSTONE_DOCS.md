@@ -1,8 +1,13 @@
-# Roadstone Language (v0.5) Documentation Sheet
+# Roadstone Language 0.6 Documentation Sheet
 
 This sheet documents the syntax and runtime behavior implemented by the current `RoadstoneMain.java` interpreter prototype.
 
-## v0.5 upgrade highlights
+## v0.6 highlights
+- catch-style EXCEPT blocks with `then ... exoutput ... end`
+- `raise(...)` and `error(...)` for manual runtime errors
+- catch context variables: `exname`, `extarget`, `exmessage`
+
+## v0.5 features still available
 - `Ask("prompt")` and typed prompts such as `Ask(Int)("How many?")`
 - `store(...)` literals for a unified storage unit container
 - `for item in values loop` and `for key, value in values loop`
@@ -23,7 +28,7 @@ This sheet documents the syntax and runtime behavior implemented by the current 
 ```
 
 ## Keywords
-`local`, `global`, `for`, `in`, `then`, `loop`, `end`, `if`, `elseif`, `else`, `while`, `defi`, `return`, `and`, `or`, `not`, `true`, `false`, `nil`, `CLASS`, `construct`, `self`, `extends`, `EXCEPT`, `store`, `analyze`, `input`
+`local`, `global`, `for`, `in`, `then`, `loop`, `end`, `if`, `elseif`, `else`, `while`, `defi`, `return`, `and`, `or`, `not`, `true`, `false`, `nil`, `CLASS`, `construct`, `self`, `extends`, `EXCEPT`, `exoutput`, `store`, `analyze`, `input`
 
 ## Variables and Scopes
 
@@ -308,14 +313,14 @@ print(type(nil))
 print(type(3))
 ```
 
-## Error Handling: `EXCEPT[...]`
+## Error Handling
 
-### Syntax
+### Legacy remap syntax
 ```text
 EXCEPT["NewErrorName", OldErrorName]
 ```
 
-### Runtime remapping (inside a block)
+### Runtime remapping (legacy behavior)
 If this statement appears in a block, and during execution a runtime error occurs with `errorName == OldErrorName`, then the interpreter throws the same error message but with `errorName == NewErrorName`.
 
 Example (rename division-by-zero):
@@ -344,6 +349,43 @@ if true then
 ```
 
 This remaps the thrown parser error name accordingly.
+
+### 0.6 catch block with `exoutput`
+```text
+EXCEPT["FriendlyError", ZeroDivisionError] then
+    <statements>
+exoutput <expr>
+end
+```
+
+Behavior:
+- the statements after `then` run inside a protected EXCEPT block
+- if a `RoadstoneRuntimeError` with name `OldErrorName` happens, it is caught
+- the catch exposes:
+  - `exname` => replacement error name
+  - `extarget` => original runtime error name
+  - `exmessage` => runtime error message
+- `exoutput <expr>` evaluates and prints the expression
+- execution then continues after the EXCEPT block
+
+Example:
+```text
+EXCEPT["FriendlyDivideError", ZeroDivisionError] then
+    raise("ZeroDivisionError", "divider cannot be zero")
+exoutput "Caught " .. exname .. ": " .. exmessage
+end
+
+print("still running")
+```
+
+### Manual error creation
+Roadstone 0.6 adds:
+```text
+raise(name, message)
+error(name, message)
+```
+
+Both create a runtime error immediately. `error(...)` is an alias of `raise(...)`.
 
 ## Operators and Examples (Copy/Paste)
 
@@ -392,4 +434,7 @@ If you remember nothing else:
 - data:
   - list: `[ ... ]` (1-based index)
   - map: `{ key: value, ... }`
-- errors: `EXCEPT["New", Old]`
+- errors:
+  - legacy remap: `EXCEPT["New", Old]`
+  - catch block: `EXCEPT["New", Old] then ... exoutput ... end`
+  - manual raise: `raise("MyError", "details")`
